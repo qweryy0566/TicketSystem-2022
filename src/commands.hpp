@@ -13,7 +13,7 @@ class TicketSystem {
   TrainManagement train_manager;
   
  public:
-  TicketSystem() {}
+  TicketSystem();
 
   bool Interprete(TokenScanner);
   void VisitAddUser(TokenScanner &);
@@ -24,8 +24,14 @@ class TicketSystem {
 
 };
 
+TicketSystem::TicketSystem() {
+  // TODO
+}
+
 bool TicketSystem::Interprete(TokenScanner token) {
-  
+  // TODO : timestamp
+  token.NextToken('[', ']');
+
 }
 
 void TicketSystem::VisitAddUser(TokenScanner &token) {
@@ -41,7 +47,7 @@ void TicketSystem::VisitQueryProfile(TokenScanner &token) {
 
 }
 void TicketSystem::VisitModifyProfile(TokenScanner &token) {
-
+  
 }
 
 #endif  // TICKETSYSTEM_COMMANDS_HPP_
