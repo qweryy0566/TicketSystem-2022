@@ -13,9 +13,7 @@ class TicketSystem {
   TrainManagement train_manager;
   
  public:
-  TicketSystem() {
-
-  }
+  TicketSystem() {}
 
   bool Interprete(TokenScanner);
   void VisitAddUser(TokenScanner &);
