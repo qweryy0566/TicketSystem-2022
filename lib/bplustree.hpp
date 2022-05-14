@@ -1,3 +1,6 @@
+#ifndef TICKETSYSTEM_BPLUSTREE_HPP_
+#define TICKETSYSTEM_BPLUSTREE_HPP_
+
 #include <fstream>
 
 template <typename _key_type, typename _subkey_type, typename _value_type>
@@ -611,3 +614,5 @@ class BPlusTree {
     }
   }
 };
+
+#endif  // TICKETSYSTEM_BPLUSTREE_HPP_

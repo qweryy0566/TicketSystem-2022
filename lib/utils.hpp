@@ -5,11 +5,16 @@
 #ifndef TICKETSYSTEM_UTILS_HPP_
 #define TICKETSYSTEM_UTILS_HPP_
 
+#include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <iostream>
-#include <string>
+
+#include "unordered_map.hpp"
+#include "vector.hpp"
 using std::cin;
 using std::cout;
+using std::string;
 
 class TokenScanner {
  private:
@@ -22,7 +27,7 @@ class TokenScanner {
   TokenScanner(const TokenScanner &obj)
       : current_{obj.current_}, buffer_{obj.buffer_} {}
 
-  std::string NextToken(char delimiter_) {
+  std::string NextToken(char delimiter_ = ' ') {
     if (current_ >= buffer_.size()) return "";
     while (current_ < buffer_.size() && buffer_[current_] == delimiter_)
       current_++;
@@ -36,12 +41,11 @@ class TokenScanner {
                         bool ck = 0) {
     if (current_ == buffer_.size()) return "";
     while (current_ < buffer_.size() && buffer_[current_] != delimiter_head_)
-      current_++;
-    size_t h = current_ + 1;
-    if (ck) h--;
+      ++current_;
+    size_t h = current_ + 1 - ck;
     while (current_ < buffer_.size() && buffer_[current_] != delimiter_tail_)
-      current_++;
-    return buffer_.substr(h, current_ - h);
+      ++current_;
+    return buffer_.substr(h, current_++ - h);  // 修改：++
   }
   void Clear() {
     buffer_.clear();
@@ -65,5 +69,16 @@ class TokenScanner {
     return buffer_.substr(current_, t + 1 - current_);
   }
 };
+
+namespace fqj {
+
+inline void ModifyString(char *dest, const string &src) {
+  memset(dest, 0, sizeof(dest));
+  strcpy(dest, src.c_str());
+}
+
+
+
+}  // namespace fqj
 
 #endif  // TICKETSYSTEM_UTILS_HPP_
