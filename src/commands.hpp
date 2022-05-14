@@ -2,16 +2,17 @@
 #define TICKETSYSTEM_COMMANDS_HPP_
 
 #include <iostream>
+
+#include "../lib/utils.hpp"
 #include "exceptions.hpp"
 #include "logs.hpp"
 #include "trains.hpp"
 #include "users.hpp"
-#include "utils.hpp"
 
 class TicketSystem {
   UserManagement user_manager;
   TrainManagement train_manager;
-  
+
  public:
   TicketSystem();
 
@@ -21,7 +22,6 @@ class TicketSystem {
   void VisitLogout(TokenScanner &);
   void VisitQueryProfile(TokenScanner &);
   void VisitModifyProfile(TokenScanner &);
-
 };
 
 TicketSystem::TicketSystem() {
@@ -31,23 +31,12 @@ TicketSystem::TicketSystem() {
 bool TicketSystem::Interprete(TokenScanner token) {
   // TODO : timestamp
   token.NextToken('[', ']');
-
 }
 
-void TicketSystem::VisitAddUser(TokenScanner &token) {
-
-}
-void TicketSystem::VisitLogin(TokenScanner &token) {
-
-}
-void TicketSystem::VisitLogout(TokenScanner &token) {
-
-}
-void TicketSystem::VisitQueryProfile(TokenScanner &token) {
-
-}
-void TicketSystem::VisitModifyProfile(TokenScanner &token) {
-  
-}
+void TicketSystem::VisitAddUser(TokenScanner &token) {}
+void TicketSystem::VisitLogin(TokenScanner &token) {}
+void TicketSystem::VisitLogout(TokenScanner &token) {}
+void TicketSystem::VisitQueryProfile(TokenScanner &token) {}
+void TicketSystem::VisitModifyProfile(TokenScanner &token) {}
 
 #endif  // TICKETSYSTEM_COMMANDS_HPP_

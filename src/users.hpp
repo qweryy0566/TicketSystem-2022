@@ -12,7 +12,7 @@ class User {
 
  public:
   User() {};
-  
+
 };
 
 class UserManagement {
