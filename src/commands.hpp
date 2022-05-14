@@ -47,9 +47,9 @@ string TicketSystem::Interprete(TokenScanner token) {
 
   argv = token.NextToken();
   if (argv == "exit") {
-    return {"bye"};
+    return "bye";
   } else if (argv == "add_user") {
-    return VisitAddUser(token);
+    return user_manager.AddUser(token);
   } else if (argv == "login") {
     return VisitLogin(token);
   } else if (argv == "logout") {
@@ -85,9 +85,6 @@ string TicketSystem::Interprete(TokenScanner token) {
   }
 }
 
-string TicketSystem::VisitAddUser(TokenScanner &token) {
-  
-}
 string TicketSystem::VisitLogin(TokenScanner &token) {}
 string TicketSystem::VisitLogout(TokenScanner &token) {}
 string TicketSystem::VisitQueryProfile(TokenScanner &token) {}

@@ -136,6 +136,7 @@ class BPlusTree {
   std::string filename_index;
   std::string filename_block;
 
+  int Size() const {}
   long long int GetValidPosition(
       int x) {  // if x, return a place for the new node in file_index_
     long long int ans;

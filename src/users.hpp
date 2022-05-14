@@ -50,7 +50,37 @@ class UserManagement {
 
  public:
   UserManagement() : users{"users_index.bin", "users.bin"} {}
-  
+
+  string AddUser(TokenScanner &token) {
+    string argv, cur_username, username, password, name, mail_addr;
+    int privilege;
+    while (!token.If_left()) {
+      argv = token.NextToken();
+      if (argv == "-c")
+        cur_username = token.NextToken();
+      else if (argv == "-u")
+        username = token.NextToken();
+      else if (argv == "-p")
+        password = token.NextToken();
+      else if (argv == "-n")
+        name = token.NextToken();
+      else if (argv == "-m")
+        mail_addr = token.NextToken();
+      else if (argv == "-g")
+        privilege = std::stoi(token.NextToken());
+      else
+        throw Exception{"Invaild Argument!"};
+    }
+    if (users.Size() && is_login.find(cur_username) == is_login.end())
+      return "-1";
+    User cur = users.Get(cur_username, 0);
+    if (cur.Privilege() <= privilege || users.Exist(username))
+      return "-1";
+    privilege = users.Size() ? privilege : 10;
+    User new_user{username, password, name, mail_addr, privilege};
+    users.Insert(username, 0, new_user);
+    return "0";
+  }
 };
 
 #endif  // TICKETSYSTEM_USERS_HPP_
