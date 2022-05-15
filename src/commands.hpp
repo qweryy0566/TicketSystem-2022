@@ -49,7 +49,7 @@ string TicketSystem::Interprete(TokenScanner token) {
   if (argv == "exit") {
     return "bye";
   } else if (argv == "add_user") {
-    return user_manager.AddUser(token);
+    return VisitAddUser(token);
   } else if (argv == "login") {
     return VisitLogin(token);
   } else if (argv == "logout") {
@@ -69,7 +69,7 @@ string TicketSystem::Interprete(TokenScanner token) {
   } else if (argv == "query_ticket") {
     return VisitQueryTicket(token);
   } else if (argv == "query_transfer") {
-    return VisitQueryTransfer(token); 
+    return VisitQueryTransfer(token);
   } else if (argv == "buy_ticket") {
     return VisitBuyTicket(token);
   } else if (argv == "query_order") {
@@ -85,11 +85,96 @@ string TicketSystem::Interprete(TokenScanner token) {
   }
 }
 
-string TicketSystem::VisitLogin(TokenScanner &token) {}
-string TicketSystem::VisitLogout(TokenScanner &token) {}
-string TicketSystem::VisitQueryProfile(TokenScanner &token) {}
-string TicketSystem::VisitModifyProfile(TokenScanner &token) {}
-string TicketSystem::VisitAddTrain(TokenScanner &token) {}
+// [N] add_user
+string TicketSystem::VisitAddUser(TokenScanner &token) {
+  string argv, cur_username, username, password, name, mail_addr;
+  int privilege;
+  while (!token.If_left()) {
+    argv = token.NextToken();
+    if (argv == "-c")
+      cur_username = token.NextToken();
+    else if (argv == "-u")
+      username = token.NextToken();
+    else if (argv == "-p")
+      password = token.NextToken();
+    else if (argv == "-n")
+      name = token.NextToken();
+    else if (argv == "-m")
+      mail_addr = token.NextToken();
+    else if (argv == "-g")
+      privilege = std::stoi(token.NextToken());
+    else
+      throw Exception{"Invaild Argument!"};
+  }
+  return user_manager.AddUser(cur_username, username, password, name, mail_addr, privilege)
+             ? "0"
+             : "-1";
+}
+// [F] login
+string TicketSystem::VisitLogin(TokenScanner &token) {
+  string argv, username, password;
+  while (!token.If_left()) {
+    argv = token.NextToken();
+    if (argv == "-u")
+      username = token.NextToken();
+    else if (argv == "-p")
+      password = token.NextToken();
+    else
+      throw Exception{"Invaild Argument!"};
+  }
+  return user_manager.Login(username, password) ? "0" : "-1";
+}
+// [F] logout
+string TicketSystem::VisitLogout(TokenScanner &token) {
+  string argv, username;
+  while (!token.If_left()) {
+    argv = token.NextToken();
+    if (argv == "-u")
+      username = token.NextToken();
+    else
+      throw Exception{"Invaild Argument!"};
+  }
+  return user_manager.Logout(username) ? "0" : "-1";
+}
+// [SF] query_profile
+string TicketSystem::VisitQueryProfile(TokenScanner &token) {
+  string argv, cur_username, username;
+  while (!token.If_left()) {
+    argv = token.NextToken();
+    if (argv == "-c")
+      cur_username = token.NextToken();
+    else if (argv == "-u")
+      username = token.NextToken();
+    else
+      throw Exception{"Invaild Argument!"};
+  }
+  return user_manager.QueryProfile(cur_username, username);
+}
+string TicketSystem::VisitModifyProfile(TokenScanner &token) {
+  string argv, cur_username, username, password{""}, name{""}, mail_addr{""};
+  int privilege{-1};
+  while (!token.If_left()) {
+    argv = token.NextToken();
+    if (argv == "-c")
+      cur_username = token.NextToken();
+    else if (argv == "-u")
+      username = token.NextToken();
+    else if (argv == "-p")
+      password = token.NextToken();
+    else if (argv == "-n")
+      name = token.NextToken();
+    else if (argv == "-m")
+      mail_addr = token.NextToken();
+    else if (argv == "-g")
+      privilege = std::stoi(token.NextToken());
+    else
+      throw Exception{"Invaild Argument!"};
+  }
+  return user_manager.ModifyProfile(cur_username, username, password, name, mail_addr, privilege);
+}
+string TicketSystem::VisitAddTrain(TokenScanner &token) {
+  
+}
 string TicketSystem::VisitDeleteTrain(TokenScanner &token) {}
 string TicketSystem::VisitReleaseTrain(TokenScanner &token) {}
 string TicketSystem::VisitQueryTrain(TokenScanner &token) {}

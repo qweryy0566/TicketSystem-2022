@@ -309,6 +309,11 @@ class unordered_map {
     }
     Del(pos.at);
   }
+  // return the number of keys erased.
+  size_t erase(const Key &key) {
+    iterator pos = find(key);
+    return pos == end() ? 0 : (erase(pos), 1);
+  }
 
   /**
    * Returns the number of elements with key

@@ -33,53 +33,68 @@ class User {
   void ChangePassword(const string &password_) {
     fqj::ModifyString(password, password_);
   }
-  void ChangeName(const string &name_) {
-    fqj::ModifyString(name, name_);
-  }
+  void ChangeName(const string &name_) { fqj::ModifyString(name, name_); }
   void ChangeMailAddr(const string &mail_) {
     fqj::ModifyString(mail_addr, mail_);
   }
-  void ChangePrivilege(const int &privilege_) {
-    privilege = privilege_;
-  }
+  void ChangePrivilege(const int &privilege_) { privilege = privilege_; }
 };
 
 class UserManagement {
   BPlusTree<string, int, User> users;
-  fqj::unordered_map<string, bool> is_login;
+  fqj::unordered_map<string, int> login;
 
  public:
   UserManagement() : users{"users_index.bin", "users.bin"} {}
 
-  string AddUser(TokenScanner &token) {
-    string argv, cur_username, username, password, name, mail_addr;
-    int privilege;
-    while (!token.If_left()) {
-      argv = token.NextToken();
-      if (argv == "-c")
-        cur_username = token.NextToken();
-      else if (argv == "-u")
-        username = token.NextToken();
-      else if (argv == "-p")
-        password = token.NextToken();
-      else if (argv == "-n")
-        name = token.NextToken();
-      else if (argv == "-m")
-        mail_addr = token.NextToken();
-      else if (argv == "-g")
-        privilege = std::stoi(token.NextToken());
-      else
-        throw Exception{"Invaild Argument!"};
-    }
-    if (users.Size() && is_login.find(cur_username) == is_login.end())
-      return "-1";
-    User cur = users.Get(cur_username, 0);
-    if (cur.Privilege() <= privilege || users.Exist(username))
-      return "-1";
-    privilege = users.Size() ? privilege : 10;
+  // 成功返回 1，失败返回 0.
+  bool AddUser(const string &cur_username, const string &username,
+               const string &password, const string &name,
+               const string &mail_addr, int &privilege) {
+    if (!users.Size())
+      privilege = 10;
+    else if (login.find(cur_username) == login.end() || login[cur_username] <= privilege || users.Exist(username))
+      return 0;
     User new_user{username, password, name, mail_addr, privilege};
     users.Insert(username, 0, new_user);
-    return "0";
+    return 1;
+  }
+  bool Login(const string &username, const string &password) {
+    if (login.find(username) != login.end() || !users.Exist(username))
+      return 0;
+    return login[username] = users.Get(username, 0).Privilege(), 1;
+  }
+  bool Logout(const string &username) {
+    if (login.find(username) == login.end()) return 0;
+    return login.erase(username), 1;
+  }
+  string QueryProfile(const string &cur_username, const string &username) {
+    if (login.find(cur_username) == login.end() || !users.Exist(username))
+      return "-1";
+    User target_user{users.Get(username, 0)};
+    if (cur_username != username && login[cur_username] <= target_user.Privilege())
+      return "-1";
+    return username + " " + target_user.Name() + " " + target_user.MailAddr() +
+           " " + std::to_string(target_user.Privilege());
+  }
+  string ModifyProfile(const string &cur_username, const string &username,
+                       const string &password, const string &name,
+                       const string &mail_addr, int &privilege) {
+    if (login.find(cur_username) == login.end() || !users.Exist(username))
+      return "-1";
+    User target_user{users.Get(username, 0)};
+    if (cur_username != username && login[cur_username] <= target_user.Privilege())
+      return "-1";
+    // 权限默认 -1.
+    if (~privilege) {
+      if (privilege >= login[cur_username]) return "-1";
+      target_user.ChangePrivilege(privilege);
+    }
+    if (!password.empty()) target_user.ChangePassword(password);
+    if (!name.empty()) target_user.ChangeName(name);
+    users.Modify(username, 0, target_user);
+    return username + " " + target_user.Name() + " " + target_user.MailAddr() +
+           " " + std::to_string(target_user.Privilege());
   }
 };
 
