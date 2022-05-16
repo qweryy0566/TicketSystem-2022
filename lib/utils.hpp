@@ -70,15 +70,50 @@ class TokenScanner {
   }
 };
 
-namespace fqj {
+// 为文件读写而写的定长字符串类。
+template <int len>
+class FixedStr {
+  char str[len + 1]{};
 
-inline void ModifyString(char *dest, const string &src) {
-  memset(dest, 0, sizeof(dest));
-  strcpy(dest, src.c_str());
-}
+ public:
+  FixedStr() {}
+  FixedStr(const string &obj) { strcpy(str, obj.c_str()); }
 
+  string ToString() const { return str; }
 
+  char &operator[](const int &index) { return str[index]; }
+  const char operator[](const int &index) const { return str[index]; }
 
-}  // namespace fqj
+  friend bool operator<(const FixedStr<len> &lhs, const FixedStr<len> &rhs) {
+    for (int i = 0; i < len; ++i) {
+      if (lhs[i] < rhs[i]) return 1;
+      if (lhs[i] > rhs[i]) return 0;
+    }
+    return 0;
+  }
+  friend bool operator<=(const FixedStr<len> &lhs, const FixedStr<len> &rhs) {
+    return !(rhs < lhs);
+  }
+  friend bool operator>(const FixedStr<len> &lhs, const FixedStr<len> &rhs) {
+    return rhs < lhs;
+  }
+  friend bool operator>=(const FixedStr<len> &lhs, const FixedStr<len> &rhs) {
+    return !(lhs < rhs);
+  }
+  friend bool operator==(const FixedStr<len> &lhs, const FixedStr<len> &rhs) {
+    for (int i = 0; i < len && (lhs[i] || rhs[i]); ++i)
+      if (lhs[i] != rhs[i]) return 0;
+    return 1;
+  }
+  friend bool operator!=(const FixedStr<len> &lhs, const FixedStr<len> &rhs) {
+    return !(lhs == rhs);
+  }
+
+  friend std::ostream &operator<<(std::ostream &lhs, const FixedStr<len> &rhs) {
+    return lhs << rhs.str;
+  }
+};
+
+namespace fqj {}  // namespace fqj
 
 #endif  // TICKETSYSTEM_UTILS_HPP_
