@@ -40,45 +40,45 @@ TicketSystem::TicketSystem() {
 
 string TicketSystem::Interprete(TokenScanner token) {
   // TODO : timestamp
-  string argv;
-  argv = token.NextToken('[', ']');
-  if (argv.empty()) return 0;
-  log_manager.AddLog(std::stoi(argv), token.Getleft());
+  string key;
+  key = token.NextToken('[', ']');
+  if (key.empty()) return 0;
+  log_manager.AddLog(std::stoi(key), token.Getleft());
 
-  argv = token.NextToken();
-  if (argv == "exit") {
+  key = token.NextToken();
+  if (key == "exit") {
     return "bye";
-  } else if (argv == "add_user") {
+  } else if (key == "add_user") {
     return VisitAddUser(token);
-  } else if (argv == "login") {
+  } else if (key == "login") {
     return VisitLogin(token);
-  } else if (argv == "logout") {
+  } else if (key == "logout") {
     return VisitLogout(token);
-  } else if (argv == "query_profile") {
+  } else if (key == "query_profile") {
     return VisitQueryProfile(token);
-  } else if (argv == "modify_profile") {
+  } else if (key == "modify_profile") {
     return VisitModifyProfile(token);
-  } else if (argv == "add_train") {
+  } else if (key == "add_train") {
     return VisitAddTrain(token);
-  } else if (argv == "delete_train") {
+  } else if (key == "delete_train") {
     return VisitDeleteTrain(token);
-  } else if (argv == "release_train") {
+  } else if (key == "release_train") {
     return VisitReleaseTrain(token);
-  } else if (argv == "query_train") {
+  } else if (key == "query_train") {
     return VisitQueryTrain(token);
-  } else if (argv == "query_ticket") {
+  } else if (key == "query_ticket") {
     return VisitQueryTicket(token);
-  } else if (argv == "query_transfer") {
+  } else if (key == "query_transfer") {
     return VisitQueryTransfer(token);
-  } else if (argv == "buy_ticket") {
+  } else if (key == "buy_ticket") {
     return VisitBuyTicket(token);
-  } else if (argv == "query_order") {
+  } else if (key == "query_order") {
     return VisitQueryOrder(token);
-  } else if (argv == "refund_ticket") {
+  } else if (key == "refund_ticket") {
     return VisitRefundTicket(token);
-  } else if (argv == "rollback") {
+  } else if (key == "rollback") {
     return VisitRollback(token);
-  } else if (argv == "clean") {
+  } else if (key == "clean") {
     return VisitClean();
   } else {
     throw Exception{"Invalid command!"};
@@ -87,37 +87,38 @@ string TicketSystem::Interprete(TokenScanner token) {
 
 // [N] add_user
 string TicketSystem::VisitAddUser(TokenScanner &token) {
-  string argv, cur_username, username, password, name, mail_addr;
+  string key, cur_username, username, password, name, mail_addr;
   int privilege;
   while (!token.If_left()) {
-    argv = token.NextToken();
-    if (argv == "-c")
+    key = token.NextToken();
+    if (key == "-c")
       cur_username = token.NextToken();
-    else if (argv == "-u")
+    else if (key == "-u")
       username = token.NextToken();
-    else if (argv == "-p")
+    else if (key == "-p")
       password = token.NextToken();
-    else if (argv == "-n")
+    else if (key == "-n")
       name = token.NextToken();
-    else if (argv == "-m")
+    else if (key == "-m")
       mail_addr = token.NextToken();
-    else if (argv == "-g")
+    else if (key == "-g")
       privilege = std::stoi(token.NextToken());
     else
       throw Exception{"Invaild Argument!"};
   }
-  return user_manager.AddUser(cur_username, username, password, name, mail_addr, privilege)
+  return user_manager.AddUser(cur_username, username, password, name, mail_addr,
+                              privilege)
              ? "0"
              : "-1";
 }
 // [F] login
 string TicketSystem::VisitLogin(TokenScanner &token) {
-  string argv, username, password;
+  string key, username, password;
   while (!token.If_left()) {
-    argv = token.NextToken();
-    if (argv == "-u")
+    key = token.NextToken();
+    if (key == "-u")
       username = token.NextToken();
-    else if (argv == "-p")
+    else if (key == "-p")
       password = token.NextToken();
     else
       throw Exception{"Invaild Argument!"};
@@ -126,10 +127,10 @@ string TicketSystem::VisitLogin(TokenScanner &token) {
 }
 // [F] logout
 string TicketSystem::VisitLogout(TokenScanner &token) {
-  string argv, username;
+  string key, username;
   while (!token.If_left()) {
-    argv = token.NextToken();
-    if (argv == "-u")
+    key = token.NextToken();
+    if (key == "-u")
       username = token.NextToken();
     else
       throw Exception{"Invaild Argument!"};
@@ -138,12 +139,12 @@ string TicketSystem::VisitLogout(TokenScanner &token) {
 }
 // [SF] query_profile
 string TicketSystem::VisitQueryProfile(TokenScanner &token) {
-  string argv, cur_username, username;
+  string key, cur_username, username;
   while (!token.If_left()) {
-    argv = token.NextToken();
-    if (argv == "-c")
+    key = token.NextToken();
+    if (key == "-c")
       cur_username = token.NextToken();
-    else if (argv == "-u")
+    else if (key == "-u")
       username = token.NextToken();
     else
       throw Exception{"Invaild Argument!"};
@@ -151,29 +152,30 @@ string TicketSystem::VisitQueryProfile(TokenScanner &token) {
   return user_manager.QueryProfile(cur_username, username);
 }
 string TicketSystem::VisitModifyProfile(TokenScanner &token) {
-  string argv, cur_username, username, password{""}, name{""}, mail_addr{""};
+  string key, cur_username, username, password{""}, name{""}, mail_addr{""};
   int privilege{-1};
   while (!token.If_left()) {
-    argv = token.NextToken();
-    if (argv == "-c")
+    key = token.NextToken();
+    if (key == "-c")
       cur_username = token.NextToken();
-    else if (argv == "-u")
+    else if (key == "-u")
       username = token.NextToken();
-    else if (argv == "-p")
+    else if (key == "-p")
       password = token.NextToken();
-    else if (argv == "-n")
+    else if (key == "-n")
       name = token.NextToken();
-    else if (argv == "-m")
+    else if (key == "-m")
       mail_addr = token.NextToken();
-    else if (argv == "-g")
+    else if (key == "-g")
       privilege = std::stoi(token.NextToken());
     else
       throw Exception{"Invaild Argument!"};
   }
-  return user_manager.ModifyProfile(cur_username, username, password, name, mail_addr, privilege);
+  return user_manager.ModifyProfile(cur_username, username, password, name,
+                                    mail_addr, privilege);
 }
 string TicketSystem::VisitAddTrain(TokenScanner &token) {
-  
+  return train_manager.AddTrain(token) ? "0" : "-1";
 }
 string TicketSystem::VisitDeleteTrain(TokenScanner &token) {}
 string TicketSystem::VisitReleaseTrain(TokenScanner &token) {}

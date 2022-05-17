@@ -15,6 +15,17 @@
 using std::cin;
 using std::cout;
 using std::string;
+using fqj::vector;
+using fqj::unordered_map;
+
+namespace fqj {
+string To2Str(const int &x) {
+  return x < 10 ? "0" + std::to_string(x) : std::to_string(x);
+}
+
+}  // namespace fqj
+
+using fqj::To2Str;
 
 class TokenScanner {
  private:
@@ -79,7 +90,7 @@ class FixedStr {
   FixedStr() {}
   FixedStr(const string &obj) { strcpy(str, obj.c_str()); }
 
-  string ToString() const { return str; }
+  explicit operator string() const { return str; }
 
   char &operator[](const int &index) { return str[index]; }
   const char operator[](const int &index) const { return str[index]; }
@@ -114,6 +125,78 @@ class FixedStr {
   }
 };
 
-namespace fqj {}  // namespace fqj
+template <int len>
+struct StrHash {
+  size_t operator()(const FixedStr<len> &obj) const {
+    size_t ret{0};
+    for (int i = 0; i < len && obj[i]; ++i) ret = ret * 257 + obj[i];
+    return ret;
+  }
+};
+
+struct Time {
+  int day{0}, hour, min;
+
+  Time() {}
+  Time(const string &obj) {  // hh-mm
+    hour = (obj[0] - '0') * 10 + obj[1] - '0';
+    min = (obj[3] - '0') * 10 + obj[4] - '0';
+  }
+  explicit operator string() const {
+    return To2Str(hour) + ":" + To2Str(min);
+  }
+
+  Time operator+(const int &rhs) const {
+    Time ret;
+    int total_time = (day * 24 + hour) * 60 + min + rhs;
+    ret.min = total_time % 60, total_time /= 60;
+    ret.hour = total_time % 24, total_time /= 24;
+    ret.day = total_time;
+    return ret;
+  }
+};
+
+constexpr int kDay[]{0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+// 仅支持平年内的日期少量加减。
+struct Date {
+  int month, day;
+
+  Date() {}
+  Date(const int &m, const int &d) : month{m}, day{d} {}
+  Date(const string &obj) {  // hh-mm
+    month = (obj[0] - '0') * 10 + obj[1] - '0';
+    day = (obj[3] - '0') * 10 + obj[4] - '0';
+  }
+  explicit operator string() const {
+    return To2Str(month) + "-" + To2Str(day);
+  }
+
+  Date operator+(const int &rhs) const {
+    Date ret{month, day + rhs};
+    if (ret.day > kDay[ret.month]) ret.day -= kDay[ret.month++];
+    return ret;
+  }
+  Date operator-(const int &rhs) const {
+    Date ret{month, day - rhs};
+    if (ret.day < 1) ret.day += kDay[--ret.month];
+    return ret;
+  }
+};
+
+class DateTime {
+  Date date;
+  Time time;
+
+ public:
+  DateTime(const Date &d, const Time &t) : date{d}, time{t} {
+    date = date + time.day, time.day = 0;
+  }
+  operator string() const {
+    return string(date) + " " + string(time);
+  }
+  friend std::ostream &operator<<(std::ostream &lhs, const DateTime &rhs) {
+    return lhs << string(rhs);
+  }
+};
 
 #endif  // TICKETSYSTEM_UTILS_HPP_
