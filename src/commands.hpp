@@ -3,9 +3,15 @@
 
 #include "../lib/exceptions.hpp"
 #include "../lib/utils.hpp"
+#ifndef NO_BPT_
 #include "logs.hpp"
 #include "trains.hpp"
 #include "users.hpp"
+#else
+#include "tmp/t_users.hpp"
+#include "tmp/t_trains.hpp"
+#include "tmp/t_logs.hpp"
+#endif
 
 class TicketSystem {
   UserManagement user_manager;
@@ -40,49 +46,50 @@ TicketSystem::TicketSystem() {
 
 string TicketSystem::Interprete(TokenScanner token) {
   // TODO : timestamp
-  string key;
+  string key, ret;
   key = token.NextToken('[', ']');
   if (key.empty()) return 0;
   log_manager.AddLog(std::stoi(key), token.Getleft());
-
+  ret = "[" + key + "] ";
   key = token.NextToken();
   if (key == "exit") {
-    return "bye";
+    ret += "bye";
   } else if (key == "add_user") {
-    return VisitAddUser(token);
+    ret += VisitAddUser(token);
   } else if (key == "login") {
-    return VisitLogin(token);
+    ret += VisitLogin(token);
   } else if (key == "logout") {
-    return VisitLogout(token);
+    ret += VisitLogout(token);
   } else if (key == "query_profile") {
-    return VisitQueryProfile(token);
+    ret += VisitQueryProfile(token);
   } else if (key == "modify_profile") {
-    return VisitModifyProfile(token);
+    ret += VisitModifyProfile(token);
   } else if (key == "add_train") {
-    return VisitAddTrain(token);
+    ret += VisitAddTrain(token);
   } else if (key == "delete_train") {
-    return VisitDeleteTrain(token);
+    ret += VisitDeleteTrain(token);
   } else if (key == "release_train") {
-    return VisitReleaseTrain(token);
+    ret += VisitReleaseTrain(token);
   } else if (key == "query_train") {
-    return VisitQueryTrain(token);
+    ret += VisitQueryTrain(token);
   } else if (key == "query_ticket") {
-    return VisitQueryTicket(token);
+    ret += VisitQueryTicket(token);
   } else if (key == "query_transfer") {
-    return VisitQueryTransfer(token);
+    ret += VisitQueryTransfer(token);
   } else if (key == "buy_ticket") {
-    return VisitBuyTicket(token);
+    ret += VisitBuyTicket(token);
   } else if (key == "query_order") {
-    return VisitQueryOrder(token);
+    ret += VisitQueryOrder(token);
   } else if (key == "refund_ticket") {
-    return VisitRefundTicket(token);
+    ret += VisitRefundTicket(token);
   } else if (key == "rollback") {
-    return VisitRollback(token);
+    ret += VisitRollback(token);
   } else if (key == "clean") {
-    return VisitClean();
+    ret += VisitClean();
   } else {
     throw Exception{"Invalid command!"};
   }
+  return ret;
 }
 
 // [N] add_user

@@ -59,7 +59,9 @@ class UserManagement {
   bool Login(const string &username, const string &password) {
     size_t userid = UserNameHash(username);
     if (login.find(username) != login.end() || !users.Exist(userid)) return 0;
-    return login[username] = users.Get(userid, 0).Privilege(), 1;
+    User target_user{users.Get(userid, 0)};
+    if (password != target_user.Password()) return 0;
+    return login[username] = target_user.Privilege(), 1;
   }
   bool Logout(const string &username) { return login.erase(username); }
   string QueryProfile(const string &cur_username, const string &username) {

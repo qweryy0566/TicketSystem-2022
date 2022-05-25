@@ -1,6 +1,3 @@
-//
-// Created by 韦捷 on 2022/1/14.
-//
 
 #ifndef TICKETSYSTEM_UTILS_HPP_
 #define TICKETSYSTEM_UTILS_HPP_
@@ -27,6 +24,9 @@ string To2Str(const int &x) {
 
 using fqj::To2Str;
 
+//
+// Created by 韦捷 on 2022/1/14.
+//
 class TokenScanner {
  private:
   // char delimiter_ = ' '; //分隔符
@@ -189,11 +189,9 @@ class DateTime {
 
  public:
   DateTime(const Date &d, const Time &t) : date{d}, time{t} {
-    date = date + time.day, time.day = 0;
+    date = time.day > 0 ? date + time.day : date - time.day, time.day = 0;
   }
-  operator string() const {
-    return string(date) + " " + string(time);
-  }
+  operator string() const { return string(date) + " " + string(time); }
   friend std::ostream &operator<<(std::ostream &lhs, const DateTime &rhs) {
     return lhs << string(rhs);
   }
