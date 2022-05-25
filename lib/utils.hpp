@@ -34,7 +34,7 @@ class TokenScanner {
   std::string buffer_;  //储存的字符串缓冲区
  public:
   TokenScanner() = default;
-  TokenScanner(std::string &Str) : current_{0}, buffer_{Str} {}
+  TokenScanner(const std::string &Str) : current_{0}, buffer_{Str} {}
   TokenScanner(const TokenScanner &obj)
       : current_{obj.current_}, buffer_{obj.buffer_} {}
 
@@ -180,6 +180,13 @@ struct Date {
     Date ret{month, day - rhs};
     if (ret.day < 1) ret.day += kDay[--ret.month];
     return ret;
+  }
+  friend bool operator<(const Date &lhs, const Date &rhs) {
+    if (lhs.month == rhs.month) return lhs.day < rhs.day;
+    return lhs.month < rhs.month;
+  }
+  friend bool operator>(const Date &lhs, const Date &rhs) {
+    return rhs < lhs;
   }
 };
 

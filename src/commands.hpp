@@ -181,11 +181,17 @@ string TicketSystem::VisitModifyProfile(TokenScanner &token) {
   return user_manager.ModifyProfile(cur_username, username, password, name,
                                     mail_addr, privilege);
 }
+
+// 火车类的实现均将 token 直接传入管理类。
 string TicketSystem::VisitAddTrain(TokenScanner &token) {
   return train_manager.AddTrain(token) ? "0" : "-1";
 }
-string TicketSystem::VisitDeleteTrain(TokenScanner &token) {}
-string TicketSystem::VisitReleaseTrain(TokenScanner &token) {}
+string TicketSystem::VisitDeleteTrain(TokenScanner &token) {
+  return train_manager.DeleteTrain(token) ? "0" : "-1";
+}
+string TicketSystem::VisitReleaseTrain(TokenScanner &token) {
+  return train_manager.ReleaseTrain(token) ? "0" : "-1";
+}
 string TicketSystem::VisitQueryTrain(TokenScanner &token) {}
 string TicketSystem::VisitQueryTicket(TokenScanner &token) {}
 string TicketSystem::VisitQueryTransfer(TokenScanner &token) {}
