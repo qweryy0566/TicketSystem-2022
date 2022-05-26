@@ -22,17 +22,71 @@ struct Train {
   bool is_release{0};
 };
 
+struct StationTrain {
+  FixedStr<20> train_id;
+  Time arr_time, dept_time;
+  int price;
+};
+struct TicketTrain {
+  // 维护每个站区间内的票数。
+  int station_num, tr[1 << 8], ltg[1 << 8];
+  void pushdown(int o) {
+    tr[o << 1] += ltg[o], ltg[o << 1] += ltg[o];
+    tr[o << 1 | 1] += ltg[o], ltg[o << 1 | 1] += ltg[o];
+    ltg[o] = 0;
+  }
+  void pushup(int o) {
+    tr[o] = std::min(tr[o << 1], tr[o << 1 | 1]);
+  }
+  void build(int o, int l, int r, int seat) {
+    if (l == r) {
+      tr[o] = seat;
+      return;
+    }
+    int mid{l + r >> 1};
+    build(o << 1, l, mid, seat);
+    build(o << 1, mid + 1, r, seat);
+    pushup(o);
+  }
+  void update(int o, int l, int r, int ql, int qr, int v = -1) {
+    if (ql <= l && r <= qr) {
+      tr[o] += v, ltg[o] += v;
+      return;
+    }
+    pushdown(o);
+    int mid{l + r >> 1};
+    if (ql <= mid) update(o << 1, l, mid, ql, qr, v);
+    if (qr > mid) update(o << 1 | 1, mid + 1, r, ql, qr, v);
+    pushup(o);
+  }
+  int query(int o, int l, int r, int ql, int qr) {
+    if (ql <= l && r <= qr) return tr[o];
+    pushdown(o);
+    int mid{l + r >> 1}, ansl{INT32_MAX}, ansr{INT32_MAX};
+    if (ql <= mid) ansl = query(o << 1, l, mid, ql, qr);
+    if (qr > mid) ansr = query(o << 1 | 1, mid + 1, r, ql, qr);
+    return std::min(ansl, ansr);
+  }
+  TicketTrain() = default;
+  TicketTrain(const int &num, const int &seat) : station_num{num} {
+    build(1, 1, station_num - 1, seat);
+  }
+};
+
 class TrainManagement {
   // trainid -> train
   BPlusTree<size_t, int, Train> trains;
   // 接下来的 BPT 均是在 release 时更改。
-  // (stationid, trainid) -> trainid
-  BPlusTree<size_t, size_t, size_t> station_trains;
+  // (stationid, trainid) -> station_train
+  BPlusTree<size_t, size_t, StationTrain> station_trains;
+  // (trainid, date) -> ticket_of_train
+  BPlusTree<size_t, Date, TicketTrain> ticket_trains;
 
  public:
   TrainManagement()
       : trains{"trains_index.bin", "trains.bin"},
-        station_trains{"station_trains_index.bin", "station_trains.bin"} {}
+        station_trains{"station_trains_index.bin", "station_trains.bin"},
+        ticket_trains{"ticket_trains_index.bin", "ticket_trains.bin"} {}
   bool AddTrain(TokenScanner &token) {
     string key;
     Train new_train;
@@ -81,8 +135,7 @@ class TrainManagement {
       // 接下来需要计算 arr_times 和 dept_times。
       for (int i = 1; i < new_train.station_num; ++i)
         new_train.arr_times[i] += new_train.dept_times[i - 1],
-        new_train.dept_times[i] += new_train.arr_times[i];
-
+            new_train.dept_times[i] += new_train.arr_times[i];
       trains.Insert(trainid, 0, new_train);
     }
     return 1;
@@ -105,7 +158,7 @@ class TrainManagement {
   bool ReleaseTrain(TokenScanner &token) {
     string key;
     size_t trainid;
-    Train target_train;
+    Train the_train;
     while (!token.If_left()) {
       key = token.NextToken();
       if (key == "-i")
@@ -114,12 +167,38 @@ class TrainManagement {
         throw Exception{"Invaild Argument!"};
     }
     if (!trains.Exist(trainid)) return 0;
-    target_train = trains.Get(trainid, 0);
-    if (target_train.is_release) return 0;
-    target_train.is_release = 1;
-    trains.Modify(trainid, 0, target_train);
+    the_train = trains.Get(trainid, 0);
+    if (the_train.is_release) return 0;
+    the_train.is_release = 1;
+    trains.Modify(trainid, 0, the_train);
     // TODO : other BPT
-    return 0;
+    for (Date i = the_train.begin_date; i <= the_train.begin_date; ++i)
+      ticket_trains.Insert(
+          trainid, i, TicketTrain{the_train.station_num, the_train.seat_num});
+    for (int i = 0; i < the_train.station_num; ++i) {
+      station_trains.Insert(
+          StationHash(the_train.stations[i]), trainid,
+          StationTrain{the_train.train_id,
+                       the_train.start_time + the_train.arr_times[i],
+                       the_train.start_time + the_train.dept_times[i],
+                       the_train.prices[i]});
+    }
+    return 1;
+  }
+  string QueryTrain(TokenScanner &token) {
+    Date date;
+    string key, train_id;
+    Train the_train;
+    while (!token.If_left()) {
+      key = token.NextToken();
+      if (key == "-i")
+        train_id = token.NextToken();
+      else if (key == "-d")
+        date = token.NextToken();
+      else
+        throw Exception{"Invaild Argument!"};
+    }
+    
   }
 };
 

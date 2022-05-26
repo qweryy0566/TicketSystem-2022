@@ -192,7 +192,9 @@ string TicketSystem::VisitDeleteTrain(TokenScanner &token) {
 string TicketSystem::VisitReleaseTrain(TokenScanner &token) {
   return train_manager.ReleaseTrain(token) ? "0" : "-1";
 }
-string TicketSystem::VisitQueryTrain(TokenScanner &token) {}
+string TicketSystem::VisitQueryTrain(TokenScanner &token) {
+  return train_manager.QueryTrain(token);
+}
 string TicketSystem::VisitQueryTicket(TokenScanner &token) {}
 string TicketSystem::VisitQueryTransfer(TokenScanner &token) {}
 string TicketSystem::VisitBuyTicket(TokenScanner &token) {}

@@ -176,6 +176,7 @@ struct Date {
     if (ret.day > kDay[ret.month]) ret.day -= kDay[ret.month++];
     return ret;
   }
+  Date &operator++() { return *this = *this + 1; }
   Date operator-(const int &rhs) const {
     Date ret{month, day - rhs};
     if (ret.day < 1) ret.day += kDay[--ret.month];
@@ -184,6 +185,9 @@ struct Date {
   friend bool operator<(const Date &lhs, const Date &rhs) {
     if (lhs.month == rhs.month) return lhs.day < rhs.day;
     return lhs.month < rhs.month;
+  }
+  friend bool operator<=(const Date &lhs, const Date &rhs) {
+    return !(rhs < lhs);
   }
   friend bool operator>(const Date &lhs, const Date &rhs) {
     return rhs < lhs;
