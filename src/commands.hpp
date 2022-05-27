@@ -176,20 +176,65 @@ string TicketSystem::VisitModifyProfile(TokenScanner &token) {
                                     mail_addr, privilege);
 }
 
-// 火车类的实现均将 token 直接传入管理类。
+// 将 token 直接传入管理类。
 string TicketSystem::VisitAddTrain(TokenScanner &token) {
   return train_manager.AddTrain(token) ? "0" : "-1";
 }
 string TicketSystem::VisitDeleteTrain(TokenScanner &token) {
-  return train_manager.DeleteTrain(token) ? "0" : "-1";
+  string key, train_id;
+  while (!token.If_left()) {
+    key = token.NextToken();
+    if (key == "-i")
+      train_id = token.NextToken();
+    else
+      throw Exception{"Invaild Argument!"};
+  }
+  return train_manager.DeleteTrain(train_id) ? "0" : "-1";
 }
 string TicketSystem::VisitReleaseTrain(TokenScanner &token) {
-  return train_manager.ReleaseTrain(token) ? "0" : "-1";
+  string key, train_id;
+  while (!token.If_left()) {
+    key = token.NextToken();
+    if (key == "-i")
+      train_id = token.NextToken();
+    else
+      throw Exception{"Invaild Argument!"};
+  }
+  return train_manager.ReleaseTrain(train_id) ? "0" : "-1";
 }
 string TicketSystem::VisitQueryTrain(TokenScanner &token) {
-  return train_manager.QueryTrain(token);
+  Date date;
+  string key, train_id;
+  while (!token.If_left()) {
+    key = token.NextToken();
+    if (key == "-i")
+      train_id = token.NextToken();
+    else if (key == "-d")
+      date = token.NextToken();
+    else
+      throw Exception{"Invaild Argument!"};
+  }
+  return train_manager.QueryTrain(date, train_id);
 }
-string TicketSystem::VisitQueryTicket(TokenScanner &token) {}
+string TicketSystem::VisitQueryTicket(TokenScanner &token) {
+  bool prior{0};
+  string key, dept, arr;
+  Date date;
+  while (!token.If_left()) {
+    key = token.NextToken();
+    if (key == "-s")
+      dept = token.NextToken();
+    else if (key == "-t")
+      arr = token.NextToken();
+    else if (key == "-d")
+      date = token.NextToken();
+    else if (key == "-p")
+      prior = token.NextToken() == "cost";
+    else
+      throw Exception{"Invaild Argument!"};
+  }
+  return train_manager.QueryTicket(dept, arr, date, prior);
+}
 string TicketSystem::VisitQueryTransfer(TokenScanner &token) {}
 string TicketSystem::VisitBuyTicket(TokenScanner &token) {}
 string TicketSystem::VisitQueryOrder(TokenScanner &token) {}

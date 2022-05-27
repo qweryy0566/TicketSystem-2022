@@ -40,12 +40,11 @@ class TicketTrain {
     tr[o << 1 | 1] += ltg[o], ltg[o << 1 | 1] += ltg[o];
     ltg[o] = 0;
   }
-  void pushup(int o) {
-    tr[o] = std::min(tr[o << 1], tr[o << 1 | 1]);
-  }
+  void pushup(int o) { tr[o] = std::min(tr[o << 1], tr[o << 1 | 1]); }
   void build(int o, int l, int r) {
     if (l == r) {
-      tr[o] = qv; return;
+      tr[o] = qv;
+      return;
     }
     int mid{l + r >> 1};
     build(o << 1, l, mid), build(o << 1 | 1, mid + 1, r);
@@ -121,7 +120,8 @@ class TrainManagement {
       } else if (key == "-p") {
         TokenScanner tmp{token.NextToken()};
         for (int i = 1; !tmp.If_left(); ++i)
-          new_train.prices[i] = new_train.prices[i - 1] + std::stoi(tmp.NextToken('|'));
+          new_train.prices[i] =
+              new_train.prices[i - 1] + std::stoi(tmp.NextToken('|'));
       } else if (key == "-x") {
         new_train.start_time = token.NextToken();
       } else if (key == "-t") {
@@ -149,38 +149,21 @@ class TrainManagement {
     // 接下来需要计算 arr_times 和 dept_times。
     for (int i = 1; i < new_train.station_num; ++i)
       new_train.arr_times[i] += new_train.dept_times[i - 1],
-      new_train.dept_times[i] += new_train.arr_times[i];
+          new_train.dept_times[i] += new_train.arr_times[i];
     trains.Insert(trainid, 0, new_train);
     return 1;
   }
 
-  bool DeleteTrain(TokenScanner &token) {
-    string key;
-    size_t trainid;
-    while (!token.If_left()) {
-      key = token.NextToken();
-      if (key == "-i")
-        trainid = TrainIdHash(token.NextToken());
-      else
-        throw Exception{"Invaild Argument!"};
-    }
+  bool DeleteTrain(const string &train_id) {
+    size_t trainid{TrainIdHash(train_id)};
     if (!trains.Exist(trainid) || trains.Get(trainid, 0).is_release) return 0;
     return trains.Delete(trainid, 0), 1;
   }
 
-  bool ReleaseTrain(TokenScanner &token) {
-    string key;
-    size_t trainid;
-    Train the_train;
-    while (!token.If_left()) {
-      key = token.NextToken();
-      if (key == "-i")
-        trainid = TrainIdHash(token.NextToken());
-      else
-        throw Exception{"Invaild Argument!"};
-    }
+  bool ReleaseTrain(const string &train_id) {
+    size_t trainid{TrainIdHash(train_id)};
     if (!trains.Exist(trainid)) return 0;
-    the_train = trains.Get(trainid, 0);
+    Train the_train{trains.Get(trainid, 0)};
     if (the_train.is_release) return 0;
     the_train.is_release = 1;
     trains.Modify(trainid, 0, the_train);
@@ -198,20 +181,10 @@ class TrainManagement {
     }
     return 1;
   }
-  string QueryTrain(TokenScanner &token) {
-    Date date;
-    string key, train_id, ret{"-1"};
-    size_t trainid;
+  string QueryTrain(const Date &date, const string &train_id) {
+    string ret{"-1"};
+    size_t trainid{TrainIdHash(train_id)};
     Train the_train;
-    while (!token.If_left()) {
-      key = token.NextToken();
-      if (key == "-i")
-        train_id = token.NextToken(), trainid = TrainIdHash(train_id);
-      else if (key == "-d")
-        date = token.NextToken();
-      else
-        throw Exception{"Invaild Argument!"};
-    }
     if (trains.Exist(trainid)) {
       the_train = trains.Get(trainid, 0);
       if (date < the_train.begin_date || date > the_train.end_date)
@@ -219,8 +192,7 @@ class TrainManagement {
       ret = train_id + ' ' + the_train.type + '\n';
       Time dept{the_train.start_time};
       TicketTrain ticket;
-      if (the_train.is_release)
-        ticket = ticket_trains.Get(trainid, date);
+      if (the_train.is_release) ticket = ticket_trains.Get(trainid, date);
       for (int i = 0; i < the_train.station_num; ++i) {
         ret += string(the_train.stations[i]) + ' ';
         if (i)
@@ -230,18 +202,25 @@ class TrainManagement {
         ret += "-> ";
         if (i + 1 < the_train.station_num)
           ret += DateTime{date, dept + the_train.dept_times[i]}, ret += ' ';
-        else 
+        else
           ret += "xx-xx xx:xx ";
         ret += std::to_string(the_train.prices[i]) + ' ';
         if (i + 1 == the_train.station_num)
           ret += 'x';
         else if (the_train.is_release)
-          ret += std::to_string(ticket.QueryTicket(i, i))  + '\n';
+          ret += std::to_string(ticket.QueryTicket(i, i)) + '\n';
         else
           ret += std::to_string(the_train.seat_num) + '\n';
       }
     }
     return ret;
+  }
+  // prior 默认为 0，表示 time，否则为 cost.
+  string QueryTicket(const string &dept, const string &arr, const Date &date,
+                     const bool &prior) {
+    string ret{"0"};
+    size_t deptid{StationHash(dept)}, arrid{StationHash(arr)};
+
   }
 };
 
