@@ -203,6 +203,11 @@ class DateTime {
     date = time.day > 0 ? date + time.day : date - time.day, time.day = 0;
   }
   operator string() const { return string(date) + " " + string(time); }
+  DateTime operator+(const int &rhs) const {
+    DateTime ret{date, time + rhs};
+    ret.date = ret.date + ret.time.day, ret.time.day = 0;
+    return ret;
+  }
   friend std::ostream &operator<<(std::ostream &lhs, const DateTime &rhs) {
     return lhs << string(rhs);
   }

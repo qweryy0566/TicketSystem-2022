@@ -3,15 +3,9 @@
 
 #include "../lib/exceptions.hpp"
 #include "../lib/utils.hpp"
-#ifndef NO_BPT_
 #include "logs.hpp"
 #include "trains.hpp"
 #include "users.hpp"
-#else
-#include "tmp/t_users.hpp"
-#include "tmp/t_trains.hpp"
-#include "tmp/t_logs.hpp"
-#endif
 
 class TicketSystem {
   UserManagement user_manager;
@@ -48,7 +42,7 @@ string TicketSystem::Interprete(TokenScanner token) {
   // TODO : timestamp
   string key, ret;
   key = token.NextToken('[', ']');
-  if (key.empty()) return 0;
+  if (!key.length()) return "";
   log_manager.AddLog(std::stoi(key), token.Getleft());
   ret = "[" + key + "] ";
   key = token.NextToken();

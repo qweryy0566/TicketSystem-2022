@@ -1,7 +1,11 @@
 #ifndef TICKETSYSTEM_TRAINS_HPP_
 #define TICKETSYSTEM_TRAINS_HPP_
 
+#ifndef NO_BPT_
 #include "../lib/bplustree.hpp"
+#else
+#include "../lib/test_logic.hpp"
+#endif
 #include "../lib/utils.hpp"
 
 static StrHash<20> TrainIdHash;
@@ -27,9 +31,10 @@ struct StationTrain {
   Time arr_time, dept_time;
   int price;
 };
-struct TicketTrain {
+class TicketTrain {
   // 维护每个站区间内的票数。
   int station_num, tr[1 << 8], ltg[1 << 8];
+  static int ql, qr, qv;
   void pushdown(int o) {
     tr[o << 1] += ltg[o], ltg[o << 1] += ltg[o];
     tr[o << 1 | 1] += ltg[o], ltg[o << 1 | 1] += ltg[o];
@@ -38,40 +43,48 @@ struct TicketTrain {
   void pushup(int o) {
     tr[o] = std::min(tr[o << 1], tr[o << 1 | 1]);
   }
-  void build(int o, int l, int r, int seat) {
+  void build(int o, int l, int r) {
     if (l == r) {
-      tr[o] = seat;
-      return;
+      tr[o] = qv; return;
     }
     int mid{l + r >> 1};
-    build(o << 1, l, mid, seat);
-    build(o << 1, mid + 1, r, seat);
+    build(o << 1, l, mid), build(o << 1 | 1, mid + 1, r);
     pushup(o);
   }
-  void update(int o, int l, int r, int ql, int qr, int v = -1) {
+  void update(int o, int l, int r) {
     if (ql <= l && r <= qr) {
-      tr[o] += v, ltg[o] += v;
+      tr[o] += qv, ltg[o] += qv;
       return;
     }
     pushdown(o);
     int mid{l + r >> 1};
-    if (ql <= mid) update(o << 1, l, mid, ql, qr, v);
-    if (qr > mid) update(o << 1 | 1, mid + 1, r, ql, qr, v);
+    if (ql <= mid) update(o << 1, l, mid);
+    if (qr > mid) update(o << 1 | 1, mid + 1, r);
     pushup(o);
   }
-  int query(int o, int l, int r, int ql, int qr) {
+  int query(int o, int l, int r) {
     if (ql <= l && r <= qr) return tr[o];
     pushdown(o);
     int mid{l + r >> 1}, ansl{INT32_MAX}, ansr{INT32_MAX};
-    if (ql <= mid) ansl = query(o << 1, l, mid, ql, qr);
-    if (qr > mid) ansr = query(o << 1 | 1, mid + 1, r, ql, qr);
+    if (ql <= mid) ansl = query(o << 1, l, mid);
+    if (qr > mid) ansr = query(o << 1 | 1, mid + 1, r);
     return std::min(ansl, ansr);
   }
+
+ public:
   TicketTrain() = default;
   TicketTrain(const int &num, const int &seat) : station_num{num} {
-    build(1, 1, station_num - 1, seat);
+    qv = seat, build(1, 0, station_num - 2);  // 管该站到下一站的票数。
+  }
+  int QueryTicket(int l, int r) {
+    return ql = l, qr = r, query(1, 0, station_num - 2);
+  }
+  void BuyATicket(int l, int r, int v = -1) {
+    ql = l, qr = r, qv = v, update(1, 0, station_num - 2);
   }
 };
+
+int TicketTrain::ql, TicketTrain::qr, TicketTrain::qv;
 
 class TrainManagement {
   // trainid -> train
@@ -125,19 +138,19 @@ class TrainManagement {
         }
       } else if (key == "-d") {
         TokenScanner tmp{token.NextToken()};
-        new_train.begin_date = tmp.NextToken();
-        new_train.end_date = tmp.NextToken();
+        new_train.begin_date = tmp.NextToken('|');
+        new_train.end_date = tmp.NextToken('|');
       } else if (key == "-y") {
         new_train.type = token.NextToken().front();
       } else {
         throw Exception{"Invaild Argument!"};
       }
-      // 接下来需要计算 arr_times 和 dept_times。
-      for (int i = 1; i < new_train.station_num; ++i)
-        new_train.arr_times[i] += new_train.dept_times[i - 1],
-            new_train.dept_times[i] += new_train.arr_times[i];
-      trains.Insert(trainid, 0, new_train);
     }
+    // 接下来需要计算 arr_times 和 dept_times。
+    for (int i = 1; i < new_train.station_num; ++i)
+      new_train.arr_times[i] += new_train.dept_times[i - 1],
+      new_train.dept_times[i] += new_train.arr_times[i];
+    trains.Insert(trainid, 0, new_train);
     return 1;
   }
 
@@ -172,7 +185,7 @@ class TrainManagement {
     the_train.is_release = 1;
     trains.Modify(trainid, 0, the_train);
     // TODO : other BPT
-    for (Date i = the_train.begin_date; i <= the_train.begin_date; ++i)
+    for (Date i = the_train.begin_date; i <= the_train.end_date; ++i)
       ticket_trains.Insert(
           trainid, i, TicketTrain{the_train.station_num, the_train.seat_num});
     for (int i = 0; i < the_train.station_num; ++i) {
@@ -187,18 +200,48 @@ class TrainManagement {
   }
   string QueryTrain(TokenScanner &token) {
     Date date;
-    string key, train_id;
+    string key, train_id, ret{"-1"};
+    size_t trainid;
     Train the_train;
     while (!token.If_left()) {
       key = token.NextToken();
       if (key == "-i")
-        train_id = token.NextToken();
+        train_id = token.NextToken(), trainid = TrainIdHash(train_id);
       else if (key == "-d")
         date = token.NextToken();
       else
         throw Exception{"Invaild Argument!"};
     }
-    
+    if (trains.Exist(trainid)) {
+      the_train = trains.Get(trainid, 0);
+      if (date < the_train.begin_date || date > the_train.end_date)
+        return ret;  // 日期不在范围内。
+      ret = train_id + ' ' + the_train.type + '\n';
+      Time dept{the_train.start_time};
+      TicketTrain ticket;
+      if (the_train.is_release)
+        ticket = ticket_trains.Get(trainid, date);
+      for (int i = 0; i < the_train.station_num; ++i) {
+        ret += string(the_train.stations[i]) + ' ';
+        if (i)
+          ret += DateTime{date, dept + the_train.arr_times[i]}, ret += ' ';
+        else
+          ret += "xx-xx xx:xx ";
+        ret += "-> ";
+        if (i + 1 < the_train.station_num)
+          ret += DateTime{date, dept + the_train.dept_times[i]}, ret += ' ';
+        else 
+          ret += "xx-xx xx:xx ";
+        ret += std::to_string(the_train.prices[i]) + ' ';
+        if (i + 1 == the_train.station_num)
+          ret += 'x';
+        else if (the_train.is_release)
+          ret += std::to_string(ticket.QueryTicket(i, i))  + '\n';
+        else
+          ret += std::to_string(the_train.seat_num) + '\n';
+      }
+    }
+    return ret;
   }
 };
 

@@ -1,7 +1,11 @@
 #ifndef TICKETSYSTEM_USERS_HPP_
 #define TICKETSYSTEM_USERS_HPP_
 
+#ifndef NO_BPT_
 #include "../lib/bplustree.hpp"
+#else
+#include "../lib/test_logic.hpp"
+#endif
 #include "../lib/utils.hpp"
 
 static StrHash<20> UserNameHash;

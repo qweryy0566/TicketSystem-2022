@@ -1,7 +1,11 @@
 #ifndef TICKETSYSTEM_LOGS_HPP_
 #define TICKETSYSTEM_LOGS_HPP_
 
+#ifndef NO_BPT_
 #include "../lib/bplustree.hpp"
+#else
+#include "../lib/test_logic.hpp"
+#endif
 
 class LogManagement {
   // 按时间戳存命令。
