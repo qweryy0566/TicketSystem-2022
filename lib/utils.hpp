@@ -20,6 +20,21 @@ string To2Str(const int &x) {
   return x < 10 ? "0" + std::to_string(x) : std::to_string(x);
 }
 
+template <class Iter, class Compare = std::less<typename Iter::value_type>>
+void Qsort(Iter first, Iter last, Compare Cmp = Compare{}) {
+  if (first == last) return;
+  Iter li{first}, ri{last};
+  typename Iter::value_type x{*li};
+  for (--ri; li != ri;) {
+    while (li != ri && !Cmp(*ri, x)) --ri;
+    *li = *ri;
+    while (li != ri && !Cmp(x, *li)) ++li;
+    *ri = *li;
+  }
+  *li = x;
+  Qsort(first, li, Cmp);
+  Qsort(++li, last, Cmp);
+}
 }  // namespace fqj
 
 using fqj::To2Str;
@@ -141,6 +156,9 @@ struct Time {
   Time(const string &obj) {  // hh-mm
     hour = (obj[0] - '0') * 10 + obj[1] - '0';
     min = (obj[3] - '0') * 10 + obj[4] - '0';
+  }
+  explicit operator int() const {
+    return (day * 24 + hour) * 60 + min;
   }
   explicit operator string() const {
     return To2Str(hour) + ":" + To2Str(min);

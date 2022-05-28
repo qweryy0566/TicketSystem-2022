@@ -31,6 +31,10 @@ class vector {
     vector *source;
 
    public:
+    using value_type = T;
+    using pointer = T *;
+    using reference = T &;
+
     iterator() {}
     iterator(int i, vector *source) : at(i), source(source) {}
 
@@ -69,6 +73,7 @@ class vector {
     iterator &operator--() { return *this -= 1; }
 
     T &operator*() const { return source->array[at]; }
+    T *operator->() const noexcept { return source->array + at; }
     /**
      * a operator to check whether two iterators are same (pointing to the same
      * memory address).
@@ -85,16 +90,16 @@ class vector {
     bool operator!=(const iterator &rhs) const { return !(*this == rhs); }
     bool operator!=(const const_iterator &rhs) const { return !(*this == rhs); }
   };
-  /**
-   * TODO
-   * has same function as iterator, just for a const object.
-   */
   class const_iterator {
     friend class vector;
     int at;
     const vector *source;
 
    public:
+    using value_type = const T;
+    using pointer = const T *;
+    using reference = const T &;
+
     const_iterator() {}
     const_iterator(int i, const vector *source) : at(i), source(source) {}
 
@@ -132,6 +137,7 @@ class vector {
     }
     const_iterator &operator--() { return *this -= 1; }
 
+    const T *operator->() const noexcept { return source->array + at; }
     const T operator*() const { return source->array[at]; }
     /**
      * a operator to check whether two iterators are same (pointing to the same
@@ -194,23 +200,15 @@ class vector {
     if (!cur_size) throw container_is_empty();
     return array[cur_size - 1];
   }
-  /**
-   * returns an iterator to the beginning.
-   */
+
   iterator begin() { return iterator(0, this); }
   const_iterator cbegin() const { return const_iterator(0, this); }
-  /**
-   * returns an iterator to the end.
-   */
   iterator end() { return iterator(cur_size, this); }
   const_iterator cend() const { return const_iterator(cur_size, this); }
 
   bool empty() const { return !cur_size; }
 
   size_t size() const { return cur_size; }
-  /**
-   * clears the contents
-   */
   void clear() { cur_size = 0; }
   /**
    * inserts value before pos
@@ -260,17 +258,12 @@ class vector {
     --cur_size;
     return iterator(ind, this);
   }
-  /**
-   * adds an element to the end.
-   */
+
   void push_back(const T &value) {
     if (cur_size + 1 == limit) DoubleSpace();
     new (array + cur_size) T(value), ++cur_size;
   }
-  /**
-   * remove the last element from the end.
-   * throw container_is_empty if size() == 0
-   */
+
   void pop_back() {
     if (!cur_size) throw container_is_empty();
     array[--cur_size].~T();

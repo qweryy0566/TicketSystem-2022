@@ -12,11 +12,7 @@ int main() {
   while (std::getline(cin, input)) try {
       output = ticket_system.Interprete(input);
       if (output.length()) {
-#ifdef NO_STAMP_
-        std::cout << output.substr(output.find(' ') + 1) << '\n';
-#else
         std::cout << output << '\n';
-#endif
         if (output.substr(output.find(' ')) == " bye") break;
       }
     } catch (const Exception &exception) {

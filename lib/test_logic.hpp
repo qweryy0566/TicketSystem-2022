@@ -2,7 +2,9 @@
 #define TICKETSYSTEM_TESTLOGIC_HPP_
 
 #include <map>
+
 #include "map.hpp"
+#include "vector.hpp"
 
 template <typename _key_type, typename _subkey_type, typename _value_type>
 class BPlusTree {
@@ -27,12 +29,19 @@ class BPlusTree {
     false_tree.erase(it);
     return false_tree.insert({std::make_pair(key, subkey), value}).second;
   }
-  bool Exist(const _key_type &key, const _subkey_type subkey =_subkey_type{}) {
+  bool Exist(const _key_type &key, const _subkey_type subkey = _subkey_type{}) {
     auto it{false_tree.find(std::make_pair(key, subkey))};
     return it != false_tree.end();
   }
   _value_type Get(const _key_type &key, const _subkey_type &subkey) {
     return false_tree[std::make_pair(key, subkey)];
+  }
+  fqj::vector<_value_type> Traverse(const _key_type &key) {
+    fqj::vector<_value_type> ret;
+    for (auto it{false_tree.lower_bound(std::make_pair(key, size_t{0}))};
+         it != false_tree.end() && it->first.first == key; ++it)
+      ret.push_back(it->second);
+    return ret;
   }
 };
 

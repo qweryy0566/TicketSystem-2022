@@ -27,9 +27,10 @@ struct Train {
 };
 
 struct StationTrain {
+  size_t trainid;
   FixedStr<20> train_id;
-  Time arr_time, dept_time;
-  int price;
+  Time arr_time, dept_time;  // 里面存的是相对起点站发车的时间。
+  int order, price;
 };
 class TicketTrain {
   // 维护每个站区间内的票数。
@@ -43,8 +44,7 @@ class TicketTrain {
   void pushup(int o) { tr[o] = std::min(tr[o << 1], tr[o << 1 | 1]); }
   void build(int o, int l, int r) {
     if (l == r) {
-      tr[o] = qv;
-      return;
+      tr[o] = qv; return;
     }
     int mid{l + r >> 1};
     build(o << 1, l, mid), build(o << 1 | 1, mid + 1, r);
@@ -78,12 +78,30 @@ class TicketTrain {
   int QueryTicket(int l, int r) {
     return ql = l, qr = r, query(1, 0, station_num - 2);
   }
-  void BuyATicket(int l, int r, int v = -1) {
+  void BuyTicket(int l, int r, int v = -1) {
     ql = l, qr = r, qv = v, update(1, 0, station_num - 2);
   }
 };
-
 int TicketTrain::ql, TicketTrain::qr, TicketTrain::qv;
+
+struct TicketResult {
+  FixedStr<20> train_id;
+  Time dept_time, arr_time;
+  int price, seat;
+};
+
+bool CmpTime(const TicketResult &lhs, const TicketResult &rhs) {
+  int lt{int(lhs.arr_time) - int(lhs.dept_time)};
+  int rt{int(rhs.arr_time) - int(rhs.dept_time)};
+  if (lt == rt) return lhs.train_id < rhs.train_id;
+  return lt < rt;
+}
+bool CmpCost(const TicketResult &lhs, const TicketResult &rhs) {
+  if (lhs.price == rhs.price) return lhs.train_id < rhs.train_id;
+  return lhs.price < rhs.price;
+}
+bool (*ResultCmp[2])(const TicketResult &, const TicketResult &){CmpTime,
+                                                                 CmpCost};
 
 class TrainManagement {
   // trainid -> train
@@ -174,9 +192,9 @@ class TrainManagement {
     for (int i = 0; i < the_train.station_num; ++i) {
       station_trains.Insert(
           StationHash(the_train.stations[i]), trainid,
-          StationTrain{the_train.train_id,
+          StationTrain{trainid, the_train.train_id,
                        the_train.start_time + the_train.arr_times[i],
-                       the_train.start_time + the_train.dept_times[i],
+                       the_train.start_time + the_train.dept_times[i], i,
                        the_train.prices[i]});
     }
     return 1;
@@ -218,9 +236,43 @@ class TrainManagement {
   // prior 默认为 0，表示 time，否则为 cost.
   string QueryTicket(const string &dept, const string &arr, const Date &date,
                      const bool &prior) {
-    string ret{"0"};
-    size_t deptid{StationHash(dept)}, arrid{StationHash(arr)};
-
+    string ret;
+    size_t deptid{StationHash(dept)}, arrid{StationHash(arr)}, trainid;
+    vector<StationTrain> dept_trains{station_trains.Traverse(deptid)},
+        arr_trains{station_trains.Traverse(arrid)};
+    vector<TicketResult> result;
+    for (auto s_it = dept_trains.begin(), t_it = arr_trains.begin();
+         s_it != dept_trains.end() && t_it != arr_trains.end(); ++s_it) {
+      while (t_it != arr_trains.end() && t_it->trainid < s_it->trainid) ++t_it;
+      if (s_it->train_id == t_it->train_id && s_it->order < t_it->order) {
+        trainid = s_it->trainid;
+        Date dept_date{date - s_it->dept_time.day};
+        if (ticket_trains.Exist(trainid, dept_date)) {
+          TicketTrain ticket{ticket_trains.Get(trainid, dept_date)};
+          result.push_back({s_it->train_id, s_it->dept_time, t_it->arr_time,
+                            t_it->price - s_it->price,
+                            ticket.QueryTicket(s_it->order, t_it->order - 1)});
+        }
+      }
+    }
+    fqj::Qsort(result.begin(), result.end(), ResultCmp[prior]);
+    ret = std::to_string(result.size());
+    for (auto it = result.begin(); it != result.end(); ++it)
+      ret += '\n' + string(it->train_id) + ' ' + dept + ' ' +
+             string(DateTime{date - it->dept_time.day, it->dept_time}) +
+             " -> " + arr + ' ' +
+             string(DateTime{date - it->dept_time.day, it->arr_time}) + ' ' +
+             std::to_string(it->price) + ' ' + std::to_string(it->seat);
+    return ret;
+  }
+  string QueryTransfer(const string &dept, const string &arr, const Date &date,
+                     const bool &prior) {
+    string ret;
+    size_t deptid{StationHash(dept)}, arrid{StationHash(arr)}, trainid;
+    vector<StationTrain> dept_trains{station_trains.Traverse(deptid)},
+        arr_trains{station_trains.Traverse(arrid)};
+    
+    return ret;
   }
 };
 

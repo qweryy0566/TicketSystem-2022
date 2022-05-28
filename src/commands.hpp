@@ -231,11 +231,29 @@ string TicketSystem::VisitQueryTicket(TokenScanner &token) {
     else if (key == "-p")
       prior = token.NextToken() == "cost";
     else
-      throw Exception{"Invaild Argument!"};
+      throw Exception{"Invaild Argument! " + '"' + key + '"'};
   }
   return train_manager.QueryTicket(dept, arr, date, prior);
 }
-string TicketSystem::VisitQueryTransfer(TokenScanner &token) {}
+string TicketSystem::VisitQueryTransfer(TokenScanner &token) {
+   bool prior{0};
+  string key, dept, arr;
+  Date date;
+  while (!token.If_left()) {
+    key = token.NextToken();
+    if (key == "-s")
+      dept = token.NextToken();
+    else if (key == "-t")
+      arr = token.NextToken();
+    else if (key == "-d")
+      date = token.NextToken();
+    else if (key == "-p")
+      prior = token.NextToken() == "cost";
+    else
+      throw Exception{"Invaild Argument! " + '"' + key + '"'};
+  }
+  return train_manager.QueryTransfer(dept, arr, date, prior);
+}
 string TicketSystem::VisitBuyTicket(TokenScanner &token) {}
 string TicketSystem::VisitQueryOrder(TokenScanner &token) {}
 string TicketSystem::VisitRefundTicket(TokenScanner &token) {}
