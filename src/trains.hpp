@@ -199,6 +199,7 @@ class TrainManagement {
     }
     return 1;
   }
+
   string QueryTrain(const Date &date, const string &train_id) {
     string ret{"-1"};
     size_t trainid{TrainIdHash(train_id)};
@@ -286,6 +287,7 @@ class TrainManagement {
       for (int i = s_it->order + 1; i < s_train.station_num; ++i)
         stat_order[string(s_train.stations[i])] = i;
       for (auto t_it = arr_trains.begin(); t_it != arr_trains.end(); ++t_it) {
+        if (s_it->train_id == t_it->train_id) continue;
         t_train = trains.Get(t_it->trainid, 0);
         for (int i = 0; i < t_it->order; ++i) {
           string trans{string(t_train.stations[i])};
