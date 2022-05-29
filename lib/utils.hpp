@@ -9,11 +9,11 @@
 
 #include "unordered_map.hpp"
 #include "vector.hpp"
+using fqj::unordered_map;
+using fqj::vector;
 using std::cin;
 using std::cout;
 using std::string;
-using fqj::vector;
-using fqj::unordered_map;
 
 namespace fqj {
 string To2Str(const int &x) {
@@ -24,6 +24,7 @@ template <class Iter, class Compare = std::less<typename Iter::value_type>>
 void Qsort(Iter first, Iter last, Compare Cmp = Compare{}) {
   if (first == last) return;
   Iter li{first}, ri{last};
+  std::swap(*li, *(li + rand() % (ri - li)));
   typename Iter::value_type x{*li};
   for (--ri; li != ri;) {
     while (li != ri && !Cmp(*ri, x)) --ri;
@@ -157,12 +158,8 @@ struct Time {
     hour = (obj[0] - '0') * 10 + obj[1] - '0';
     min = (obj[3] - '0') * 10 + obj[4] - '0';
   }
-  explicit operator int() const {
-    return (day * 24 + hour) * 60 + min;
-  }
-  explicit operator string() const {
-    return To2Str(hour) + ":" + To2Str(min);
-  }
+  explicit operator int() const { return (day * 24 + hour) * 60 + min; }
+  explicit operator string() const { return To2Str(hour) + ":" + To2Str(min); }
 
   Time operator+(const int &rhs) const {
     Time ret;
@@ -172,9 +169,15 @@ struct Time {
     ret.day = total_time;
     return ret;
   }
+  friend bool operator<(const Time &lhs, const Time &rhs) {
+    if (lhs.min == rhs.min) return lhs.hour < rhs.hour;
+    return lhs.min < rhs.min;
+  }
 };
 
-constexpr int kDay[]{0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+static constexpr int kDay[]{0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+static constexpr int kSumDay[]{0,   31,  59,  90,  120, 151, 181,
+                               212, 243, 273, 304, 334, 365};
 // 仅支持平年内的日期少量加减。
 struct Date {
   int month, day;
@@ -185,9 +188,8 @@ struct Date {
     month = (obj[0] - '0') * 10 + obj[1] - '0';
     day = (obj[3] - '0') * 10 + obj[4] - '0';
   }
-  explicit operator string() const {
-    return To2Str(month) + "-" + To2Str(day);
-  }
+  explicit operator int() const { return day + kSumDay[month - 1]; }
+  explicit operator string() const { return To2Str(month) + "-" + To2Str(day); }
 
   Date operator+(const int &rhs) const {
     Date ret{month, day + rhs};
@@ -200,6 +202,9 @@ struct Date {
     if (ret.day < 1) ret.day += kDay[--ret.month];
     return ret;
   }
+  friend int operator-(const Date &lhs, const Date &rhs) {
+    return int(lhs) - int(rhs);
+  }
   friend bool operator<(const Date &lhs, const Date &rhs) {
     if (lhs.month == rhs.month) return lhs.day < rhs.day;
     return lhs.month < rhs.month;
@@ -207,24 +212,25 @@ struct Date {
   friend bool operator<=(const Date &lhs, const Date &rhs) {
     return !(rhs < lhs);
   }
-  friend bool operator>(const Date &lhs, const Date &rhs) {
-    return rhs < lhs;
-  }
+  friend bool operator>(const Date &lhs, const Date &rhs) { return rhs < lhs; }
 };
 
-class DateTime {
+struct DateTime {
   Date date;
   Time time;
 
- public:
+  DateTime() {}
   DateTime(const Date &d, const Time &t) : date{d}, time{t} {
     date = time.day > 0 ? date + time.day : date - time.day, time.day = 0;
   }
-  operator string() const { return string(date) + " " + string(time); }
+  explicit operator string() const { return string(date) + " " + string(time); }
   DateTime operator+(const int &rhs) const {
     DateTime ret{date, time + rhs};
     ret.date = ret.date + ret.time.day, ret.time.day = 0;
     return ret;
+  }
+  friend int operator-(const DateTime &lhs, const DateTime &rhs) {
+    return (lhs.date - rhs.date) * 1440 + (int(lhs.time) - int(rhs.time));
   }
   friend std::ostream &operator<<(std::ostream &lhs, const DateTime &rhs) {
     return lhs << string(rhs);

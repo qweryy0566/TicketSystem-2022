@@ -44,7 +44,8 @@ class TicketTrain {
   void pushup(int o) { tr[o] = std::min(tr[o << 1], tr[o << 1 | 1]); }
   void build(int o, int l, int r) {
     if (l == r) {
-      tr[o] = qv; return;
+      tr[o] = qv;
+      return;
     }
     int mid{l + r >> 1};
     build(o << 1, l, mid), build(o << 1 | 1, mid + 1, r);
@@ -86,22 +87,21 @@ int TicketTrain::ql, TicketTrain::qr, TicketTrain::qv;
 
 struct TicketResult {
   FixedStr<20> train_id;
-  Time dept_time, arr_time;
-  int price, seat;
+  DateTime dept_time, arr_time;
+  int time, price, seat;
+
+  static bool CmpTime(const TicketResult &lhs, const TicketResult &rhs) {
+    if (lhs.time == rhs.time) return lhs.train_id < rhs.train_id;
+    return lhs.time < rhs.time;
+  }
+  static bool CmpCost(const TicketResult &lhs, const TicketResult &rhs) {
+    if (lhs.price == rhs.price) return lhs.train_id < rhs.train_id;
+    return lhs.price < rhs.price;
+  }
 };
 
-bool CmpTime(const TicketResult &lhs, const TicketResult &rhs) {
-  int lt{int(lhs.arr_time) - int(lhs.dept_time)};
-  int rt{int(rhs.arr_time) - int(rhs.dept_time)};
-  if (lt == rt) return lhs.train_id < rhs.train_id;
-  return lt < rt;
-}
-bool CmpCost(const TicketResult &lhs, const TicketResult &rhs) {
-  if (lhs.price == rhs.price) return lhs.train_id < rhs.train_id;
-  return lhs.price < rhs.price;
-}
-bool (*ResultCmp[2])(const TicketResult &, const TicketResult &){CmpTime,
-                                                                 CmpCost};
+bool (*ResultCmp[2])(const TicketResult &, const TicketResult &){
+    TicketResult::CmpTime, TicketResult::CmpCost};
 
 class TrainManagement {
   // trainid -> train
@@ -214,12 +214,12 @@ class TrainManagement {
       for (int i = 0; i < the_train.station_num; ++i) {
         ret += string(the_train.stations[i]) + ' ';
         if (i)
-          ret += DateTime{date, dept + the_train.arr_times[i]}, ret += ' ';
+          ret += string(DateTime{date, dept + the_train.arr_times[i]}) + ' ';
         else
           ret += "xx-xx xx:xx ";
         ret += "-> ";
         if (i + 1 < the_train.station_num)
-          ret += DateTime{date, dept + the_train.dept_times[i]}, ret += ' ';
+          ret += string(DateTime{date, dept + the_train.dept_times[i]}) + ' ';
         else
           ret += "xx-xx xx:xx ";
         ret += std::to_string(the_train.prices[i]) + ' ';
@@ -238,8 +238,8 @@ class TrainManagement {
                      const bool &prior) {
     string ret;
     size_t deptid{StationHash(dept)}, arrid{StationHash(arr)}, trainid;
-    vector<StationTrain> dept_trains{station_trains.Traverse(deptid)},
-        arr_trains{station_trains.Traverse(arrid)};
+    vector<StationTrain> dept_trains{station_trains.Traverse(deptid)};
+    vector<StationTrain> arr_trains{station_trains.Traverse(arrid)};
     vector<TicketResult> result;
     for (auto s_it = dept_trains.begin(), t_it = arr_trains.begin();
          s_it != dept_trains.end() && t_it != arr_trains.end(); ++s_it) {
@@ -249,7 +249,10 @@ class TrainManagement {
         Date dept_date{date - s_it->dept_time.day};
         if (ticket_trains.Exist(trainid, dept_date)) {
           TicketTrain ticket{ticket_trains.Get(trainid, dept_date)};
-          result.push_back({s_it->train_id, s_it->dept_time, t_it->arr_time,
+          result.push_back({s_it->train_id,
+                            DateTime{dept_date, s_it->dept_time},
+                            DateTime{dept_date, t_it->arr_time},
+                            int(t_it->arr_time) - int(s_it->dept_time),
                             t_it->price - s_it->price,
                             ticket.QueryTicket(s_it->order, t_it->order - 1)});
         }
@@ -259,19 +262,113 @@ class TrainManagement {
     ret = std::to_string(result.size());
     for (auto it = result.begin(); it != result.end(); ++it)
       ret += '\n' + string(it->train_id) + ' ' + dept + ' ' +
-             string(DateTime{date - it->dept_time.day, it->dept_time}) +
-             " -> " + arr + ' ' +
-             string(DateTime{date - it->dept_time.day, it->arr_time}) + ' ' +
-             std::to_string(it->price) + ' ' + std::to_string(it->seat);
+             string(it->dept_time) + " -> " + arr + ' ' + string(it->arr_time) +
+             ' ' + std::to_string(it->price) + ' ' + std::to_string(it->seat);
     return ret;
   }
   string QueryTransfer(const string &dept, const string &arr, const Date &date,
-                     const bool &prior) {
+                       const bool &prior) {
+    string ret{"0"}, mid_str;
+    Date s_dept, t_dept;
+    DateTime mid_s, mid_t;
+    size_t deptid{StationHash(dept)}, arrid{StationHash(arr)};
+    vector<StationTrain> dept_trains{station_trains.Traverse(deptid)};
+    vector<StationTrain> arr_trains{station_trains.Traverse(arrid)};
+    TicketResult train1, train2;
+    int the_time{INT32_MAX}, the_cost{INT32_MAX}, cur_cost, cur_time;
+
+    for (auto s_it = dept_trains.begin(); s_it != dept_trains.end(); ++s_it) {
+      s_dept = date - s_it->dept_time.day;
+      if (!ticket_trains.Exist(s_it->trainid, s_dept)) continue;
+      Train s_train{trains.Get(s_it->trainid, 0)}, t_train;
+      TicketTrain s_ticket{ticket_trains.Get(s_it->trainid, s_dept)};
+      unordered_map<string, int> stat_order;
+      for (int i = s_it->order + 1; i < s_train.station_num; ++i)
+        stat_order[string(s_train.stations[i])] = i;
+      for (auto t_it = arr_trains.begin(); t_it != arr_trains.end(); ++t_it) {
+        t_train = trains.Get(t_it->trainid, 0);
+        for (int i = 0; i < t_it->order; ++i) {
+          string trans{string(t_train.stations[i])};
+          if (stat_order.find(trans) == stat_order.end()) continue;
+          mid_s = {s_dept,
+                   s_train.start_time + s_train.arr_times[stat_order[trans]]};
+          // 接下来算出下一班车的理论最早发车日期。
+          t_dept =
+              mid_s.date - (t_train.start_time + t_train.dept_times[i]).day +
+              (t_train.dept_times[i] < s_train.arr_times[stat_order[trans]]);
+          t_dept = std::max(t_dept, t_train.begin_date);
+          if (t_dept > t_train.end_date) continue;
+          TicketTrain t_ticket{ticket_trains.Get(t_it->trainid, t_dept)};
+
+          mid_t = {t_dept, t_train.start_time + t_train.dept_times[i]};
+          cur_cost = s_train.prices[stat_order[trans]] - s_it->price +
+                     t_it->price - t_train.prices[i];
+          cur_time = s_train.arr_times[stat_order[trans]] -
+                     s_train.dept_times[s_it->order] +
+                     t_train.arr_times[t_it->order] - t_train.dept_times[i] +
+                     (mid_t - mid_s);
+          bool is_better{0};
+          if (!prior) {
+            if (cur_time == the_time)
+              if (cur_cost == the_cost)
+                if (train1.train_id == s_it->train_id)
+                  is_better = t_it->train_id < train2.train_id;
+                else
+                  is_better = s_it->train_id < train2.train_id;
+              else
+                is_better = cur_cost < the_cost;
+            else
+              is_better = cur_time < the_time;
+          } else {
+            if (cur_cost == the_cost)
+              if (cur_time == the_time)
+                if (train1.train_id == s_it->train_id)
+                  is_better = t_it->train_id < train2.train_id;
+                else
+                  is_better = s_it->train_id < train2.train_id;
+              else
+                is_better = cur_time < the_time;
+            else
+              is_better = cur_cost < the_cost;
+          }
+
+          if (is_better) {
+            the_time = cur_time, the_cost = cur_cost;
+            mid_str = trans;
+            train1 = {s_it->train_id,
+                      DateTime{s_dept, s_it->dept_time},
+                      mid_s,
+                      0,  // 没有必要计算时间。
+                      s_train.prices[stat_order[trans]] - s_it->price,
+                      s_ticket.QueryTicket(s_it->order, stat_order[trans] - 1)};
+            train2 = {t_it->train_id,
+                      mid_t,
+                      DateTime{t_dept, t_it->arr_time},
+                      0,  // 没有必要计算时间。
+                      t_it->price - t_train.prices[i],
+                      t_ticket.QueryTicket(i, t_it->order - 1)};
+          }
+        }
+      }
+    }
+
+    if (mid_str.length()) {
+      ret = string(train1.train_id) + ' ' + dept + ' ' +
+            string(train1.dept_time) + " -> " + mid_str + ' ' +
+            string(train1.arr_time) + ' ' + std::to_string(train1.price) + ' ' +
+            std::to_string(train1.seat);
+      ret += '\n' + string(train2.train_id) + ' ' + mid_str + ' ' +
+             string(train2.dept_time) + " -> " + arr + ' ' +
+             string(train2.arr_time) + ' ' + std::to_string(train2.price) +
+             ' ' + std::to_string(train2.seat);
+    }
+    return ret;
+  }
+  string BuyTicket(const string &username, const string &train_id,
+                   const Date &date, const string &dept, const string &arr,
+                   const int &cnt, const bool &will_wait) {
     string ret;
-    size_t deptid{StationHash(dept)}, arrid{StationHash(arr)}, trainid;
-    vector<StationTrain> dept_trains{station_trains.Traverse(deptid)},
-        arr_trains{station_trains.Traverse(arrid)};
-    
+
     return ret;
   }
 };
