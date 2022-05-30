@@ -107,21 +107,9 @@ struct Order {
   int timestamp, price, cnt;
   FixedStr<20> username, train_id;
   FixedStr<30> dept, arr;
+  int s_order, t_order;
   DateTime dept_time, arr_time;
 
-  Order() {}
-  Order(const int &stamp, const int &price, const int &cnt,
-        const string &username, const string &train_id, const string &dept,
-        const string &arr, const DateTime &s_time, const DateTime &t_time)
-      : timestamp{stamp},
-        price{price},
-        cnt{cnt},
-        username{username},
-        train_id{train_id},
-        dept{dept},
-        arr{arr},
-        dept_time{s_time},
-        arr_time{t_time} {}
   explicit operator string() const {
     string status_str;
     if (status == SUCCESS)
@@ -135,6 +123,11 @@ struct Order {
            ' ' + std::to_string(price) + ' ' + std::to_string(cnt);
   }
 };
+struct PendingInfo {
+  int timestamp, need, s_order, t_order;
+  size_t userid, trainid;
+  Date dept_date;
+};
 
 class TrainManagement {
   // trainid -> train
@@ -146,8 +139,8 @@ class TrainManagement {
   BPlusTree<size_t, Date, TicketTrain> ticket_trains;
   // (userid, -timestamp) -> order
   BPlusTree<size_t, int, Order> orders;
-  // (<trainid, date>, -timestamp) -> order
-  BPlusTree<std::pair<size_t, Date>, int, Order> pending_orders;
+  // (<trainid, date>, -timestamp) -> pending_info
+  BPlusTree<std::pair<size_t, Date>, int, PendingInfo> pending_orders;
 
  public:
   TrainManagement()
@@ -411,7 +404,7 @@ class TrainManagement {
                    const int &cnt, const bool &will_wait,
                    const int &timestamp) {
     string ret;
-    size_t trainid{TrainIdHash(train_id)};
+    size_t userid{UserNameHash(username)}, trainid{TrainIdHash(train_id)};
     size_t deptid{StationHash(dept)}, arrid{StationHash(arr)};
     StationTrain s_it, t_it;
     if (!station_trains.Exist(deptid, trainid) ||
@@ -426,27 +419,31 @@ class TrainManagement {
     if (ticket.seat < cnt) return "-1";
     int left{ticket.QueryTicket(s_it.order, t_it.order - 1)};
     if (left < cnt && !will_wait) return "-1";
-    Order the_order{timestamp,
+    Order the_order{Order::SUCCESS,  // 默认成功。
+                    timestamp,
                     t_it.price - s_it.price,
                     cnt,
                     username,
                     train_id,
                     dept,
                     arr,
+                    s_it.order,
+                    t_it.order,
                     DateTime{dept_date, s_it.dept_time},
                     DateTime{dept_date, t_it.arr_time}};
     if (left >= cnt) {
       ticket.BuyTickets(s_it.order, t_it.order - 1, cnt);
       ticket_trains.Modify(trainid, dept_date, ticket);
-      the_order.status = Order::SUCCESS;
       ret = std::to_string(1ll * cnt * (t_it.price - s_it.price));
     } else {
       // 注意：候补也要加入订单记录内。
       the_order.status = Order::PENDING;
-      pending_orders.Insert({trainid, dept_date}, -timestamp, the_order);
+      PendingInfo pending_info{timestamp, cnt,     s_it.order, t_it.order,
+                               userid,    trainid, dept_date};
+      pending_orders.Insert({trainid, dept_date}, -timestamp, pending_info);
       ret = "queue";
     }
-    orders.Insert(UserNameHash(username), -timestamp, the_order);
+    orders.Insert(userid, -timestamp, the_order);
     return ret;
   }
   string QueryOrder(const string &username) {
@@ -456,10 +453,45 @@ class TrainManagement {
     for (auto it : user_orders) ret += '\n' + string(it);
     return ret;
   }
-  string RefundTicket(const string &username, const int &rank) {
-    string ret;
+  bool RefundTicket(const string &username, const unsigned &rank) {
     vector<Order> user_orders{orders.Traverse(UserNameHash(username))};
-    
+    if (rank > user_orders.size()) return 0;
+    if (user_orders[rank - 1].status == Order::REFUNDED) return 0;
+    Order the_order{user_orders[rank - 1]};
+    Order::Status old_status{the_order.status};
+    the_order.status = Order::REFUNDED;
+    int &timestamp = the_order.timestamp;
+    Date &dept_date = the_order.dept_time.date;
+    size_t userid{UserNameHash(the_order.username)};
+    size_t trainid{TrainIdHash(the_order.train_id)};
+    orders.Modify(userid, -the_order.timestamp, the_order);
+    if (old_status == Order::PENDING) {
+      pending_orders.Delete({trainid, dept_date}, -timestamp);
+    } else {
+      TicketTrain ticket{ticket_trains.Get(trainid, dept_date)};
+      // 把票买回去。
+      ticket.BuyTickets(the_order.s_order, the_order.t_order, -the_order.cnt);
+      vector<PendingInfo> pendings{
+          pending_orders.Traverse({trainid, dept_date})};
+      for (auto it : pendings)
+        if (ticket.QueryTicket(it.s_order, it.t_order - 1) >= it.need) {
+          ticket.BuyTickets(it.s_order, it.t_order - 1, it.need);
+          pending_orders.Delete({it.trainid, it.dept_date}, -it.timestamp);
+          the_order = orders.Get(it.userid, -it.timestamp);
+          the_order.status = Order::SUCCESS;
+          orders.Modify(it.userid, -it.timestamp, the_order);
+        }
+      ticket_trains.Modify(trainid, dept_date, ticket);
+    }
+    return 1;
+  }
+
+  void Clean() {
+    trains.Clear();
+    station_trains.Clear();
+    ticket_trains.Clear();
+    orders.Clear();
+    pending_orders.Clear();
   }
 };
 

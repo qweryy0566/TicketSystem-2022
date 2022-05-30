@@ -19,9 +19,9 @@ int main() {
         if (output.substr(output.find(' ')) == " bye") break;
       }
     } catch (const Exception &exception) {
-#ifdef DEBUG
-      cout << exception.what() << '\n';
-#endif
+      std::cerr << exception.what() << '\n';
+    } catch(...) {
+      std::cerr << "Invalid format!\n";
     }
   return 0;
 }

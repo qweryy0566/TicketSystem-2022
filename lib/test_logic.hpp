@@ -38,11 +38,12 @@ class BPlusTree {
   }
   fqj::vector<_value_type> Traverse(const _key_type &key) {
     fqj::vector<_value_type> ret;
-    for (auto it{false_tree.lower_bound(std::make_pair(key, size_t{0}))};
+    for (auto it{false_tree.lower_bound({key, size_t{0}})};
          it != false_tree.end() && it->first.first == key; ++it)
       ret.push_back(it->second);
     return ret;
   }
+  void Clear() { false_tree.clear(); }
 };
 
 #endif  // TICKETSYSTEM_TESTLOGIC_HPP_

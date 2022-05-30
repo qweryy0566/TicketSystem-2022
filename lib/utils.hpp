@@ -219,6 +219,12 @@ struct Date {
   friend bool operator>=(const Date &lhs, const Date &rhs) {
     return !(lhs < rhs);
   }
+  friend bool operator==(const Date &lhs, const Date &rhs) {
+    return lhs.day == rhs.day && lhs.month == rhs.month;
+  }
+  friend bool operator!=(const Date &lhs, const Date &rhs) {
+    return !(lhs == rhs);
+  }
 };
 
 struct DateTime {

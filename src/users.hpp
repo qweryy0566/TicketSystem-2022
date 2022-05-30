@@ -100,6 +100,11 @@ class UserManagement {
     return username + " " + target_user.Name() + " " + target_user.MailAddr() +
            " " + std::to_string(target_user.Privilege());
   }
+
+  void Clean() {
+    users.Clear();
+    login.clear();
+  }
 };
 
 #endif  // TICKETSYSTEM_USERS_HPP_
