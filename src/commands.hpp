@@ -27,7 +27,7 @@ class TicketSystem {
   string VisitQueryTrain(TokenScanner &);
   string VisitQueryTicket(TokenScanner &);
   string VisitQueryTransfer(TokenScanner &);
-  string VisitBuyTicket(TokenScanner &);
+  string VisitBuyTicket(const int &, TokenScanner &);
   string VisitQueryOrder(TokenScanner &);
   string VisitRefundTicket(TokenScanner &);
   string VisitRollback(TokenScanner &);
@@ -43,7 +43,8 @@ string TicketSystem::Interprete(TokenScanner token) {
   string key, ret;
   key = token.NextToken('[', ']');
   if (!key.length()) return "";
-  log_manager.AddLog(std::stoi(key), token.Getleft());
+  int timestamp{std::stoi(key)};
+  log_manager.AddLog(timestamp, token.Getleft());
   ret = "[" + key + "] ";
   key = token.NextToken();
   if (key == "exit") {
@@ -71,7 +72,7 @@ string TicketSystem::Interprete(TokenScanner token) {
   } else if (key == "query_transfer") {
     ret += VisitQueryTransfer(token);
   } else if (key == "buy_ticket") {
-    ret += VisitBuyTicket(token);
+    ret += VisitBuyTicket(timestamp, token);
   } else if (key == "query_order") {
     ret += VisitQueryOrder(token);
   } else if (key == "refund_ticket") {
@@ -254,7 +255,7 @@ string TicketSystem::VisitQueryTransfer(TokenScanner &token) {
   }
   return train_manager.QueryTransfer(dept, arr, date, prior);
 }
-string TicketSystem::VisitBuyTicket(TokenScanner &token) {
+string TicketSystem::VisitBuyTicket(const int &timestamp, TokenScanner &token) {
   bool will_wait{0};
   string key, username, train_id, dept, arr;
   Date date;
@@ -278,11 +279,37 @@ string TicketSystem::VisitBuyTicket(TokenScanner &token) {
     else
       throw Exception{"Invaild Argument! " + '"' + key + '"'};
   }
+  if (!user_manager.IsLogin(username)) return "-1";
   return train_manager.BuyTicket(username, train_id, date, dept, arr, cnt,
-                                 will_wait);
+                                 will_wait, timestamp);
 }
-string TicketSystem::VisitQueryOrder(TokenScanner &token) {}
-string TicketSystem::VisitRefundTicket(TokenScanner &token) {}
+string TicketSystem::VisitQueryOrder(TokenScanner &token) {
+  string key, username;
+  while (!token.If_left()) {
+    key = token.NextToken();
+    if (key == "-u")
+      username = token.NextToken();
+    else
+      throw Exception{"Invaild Argument! " + '"' + key + '"'};
+  }
+  if (!user_manager.IsLogin(username)) return "-1";
+  return train_manager.QueryOrder(username);
+}
+string TicketSystem::VisitRefundTicket(TokenScanner &token) {
+  string key, username;
+  int rank{1};
+  while (!token.If_left()) {
+    key = token.NextToken();
+    if (key == "-u")
+      username = token.NextToken();
+    else if (key == "-n")
+      rank = std::stoi(token.NextToken());
+    else
+      throw Exception{"Invaild Argument! " + '"' + key + '"'};
+  }
+  if (!user_manager.IsLogin(username)) return "-1";
+  return train_manager.RefundTicket(username, rank);
+}
 string TicketSystem::VisitRollback(TokenScanner &token) {}
 string TicketSystem::VisitClean() {}
 

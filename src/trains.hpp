@@ -8,9 +8,6 @@
 #endif
 #include "../lib/utils.hpp"
 
-static StrHash<20> TrainIdHash;
-static StrHash<30> StationHash;
-
 constexpr int kStNum = 101;  // 0-base
 
 struct Train {
@@ -34,7 +31,7 @@ struct StationTrain {
 };
 class TicketTrain {
   // 维护每个站区间内的票数。
-  int station_num, tr[1 << 8], ltg[1 << 8];
+  int tr[1 << 8], ltg[1 << 8];
   static int ql, qr, qv;
   void pushdown(int o) {
     tr[o << 1] += ltg[o], ltg[o << 1] += ltg[o];
@@ -44,7 +41,7 @@ class TicketTrain {
   void pushup(int o) { tr[o] = std::min(tr[o << 1], tr[o << 1 | 1]); }
   void build(int o, int l, int r) {
     if (l == r) {
-      tr[o] = qv;
+      tr[o] = seat;
       return;
     }
     int mid{l + r >> 1};
@@ -72,14 +69,15 @@ class TicketTrain {
   }
 
  public:
+  int station_num, seat;
   TicketTrain() = default;
-  TicketTrain(const int &num, const int &seat) : station_num{num} {
-    qv = seat, build(1, 0, station_num - 2);  // 管该站到下一站的票数。
+  TicketTrain(const int &num, const int &seat) : station_num{num}, seat{seat} {
+    build(1, 0, station_num - 2);  // 管该站到下一站的票数。
   }
   int QueryTicket(int l, int r) {
     return ql = l, qr = r, query(1, 0, station_num - 2);
   }
-  void BuyTicket(int l, int r, int v = -1) {
+  void BuyTickets(int l, int r, int v) {
     ql = l, qr = r, qv = v, update(1, 0, station_num - 2);
   }
 };
@@ -100,8 +98,43 @@ struct TicketResult {
   }
 };
 
-bool (*ResultCmp[2])(const TicketResult &, const TicketResult &){
+static bool (*ResultCmp[2])(const TicketResult &, const TicketResult &){
     TicketResult::CmpTime, TicketResult::CmpCost};
+
+struct Order {
+  enum Status { SUCCESS, PENDING, REFUNDED };
+  Status status;
+  int timestamp, price, cnt;
+  FixedStr<20> username, train_id;
+  FixedStr<30> dept, arr;
+  DateTime dept_time, arr_time;
+
+  Order() {}
+  Order(const int &stamp, const int &price, const int &cnt,
+        const string &username, const string &train_id, const string &dept,
+        const string &arr, const DateTime &s_time, const DateTime &t_time)
+      : timestamp{stamp},
+        price{price},
+        cnt{cnt},
+        username{username},
+        train_id{train_id},
+        dept{dept},
+        arr{arr},
+        dept_time{s_time},
+        arr_time{t_time} {}
+  explicit operator string() const {
+    string status_str;
+    if (status == SUCCESS)
+      status_str = "[success]";
+    else if (status == PENDING)
+      status_str = "[pending]";
+    else
+      status_str = "[refunded]";
+    return status_str + ' ' + string(train_id) + ' ' + string(dept) + ' ' +
+           string(dept_time) + " -> " + string(arr) + ' ' + string(arr_time) +
+           ' ' + std::to_string(price) + ' ' + std::to_string(cnt);
+  }
+};
 
 class TrainManagement {
   // trainid -> train
@@ -111,12 +144,18 @@ class TrainManagement {
   BPlusTree<size_t, size_t, StationTrain> station_trains;
   // (trainid, date) -> ticket_of_train
   BPlusTree<size_t, Date, TicketTrain> ticket_trains;
+  // (userid, -timestamp) -> order
+  BPlusTree<size_t, int, Order> orders;
+  // (<trainid, date>, -timestamp) -> order
+  BPlusTree<std::pair<size_t, Date>, int, Order> pending_orders;
 
  public:
   TrainManagement()
       : trains{"trains_index.bin", "trains.bin"},
         station_trains{"station_trains_index.bin", "station_trains.bin"},
-        ticket_trains{"ticket_trains_index.bin", "ticket_trains.bin"} {}
+        ticket_trains{"ticket_trains_index.bin", "ticket_trains.bin"},
+        orders{"orders_index.bin", "orders.bin"},
+        pending_orders{"pending_index.bin", "pending.bin"} {}
   bool AddTrain(TokenScanner &token) {
     string key;
     Train new_train;
@@ -185,7 +224,6 @@ class TrainManagement {
     if (the_train.is_release) return 0;
     the_train.is_release = 1;
     trains.Modify(trainid, 0, the_train);
-    // TODO : other BPT
     for (Date i = the_train.begin_date; i <= the_train.end_date; ++i)
       ticket_trains.Insert(
           trainid, i, TicketTrain{the_train.station_num, the_train.seat_num});
@@ -270,6 +308,7 @@ class TrainManagement {
   string QueryTransfer(const string &dept, const string &arr, const Date &date,
                        const bool &prior) {
     string ret{"0"}, mid_str;
+    Time s_time, t_time;
     Date s_dept, t_dept;
     DateTime mid_s, mid_t;
     size_t deptid{StationHash(dept)}, arrid{StationHash(arr)};
@@ -278,45 +317,45 @@ class TrainManagement {
     TicketResult train1, train2;
     int the_time{INT32_MAX}, the_cost{INT32_MAX}, cur_cost, cur_time;
 
-    for (auto s_it = dept_trains.begin(); s_it != dept_trains.end(); ++s_it) {
-      s_dept = date - s_it->dept_time.day;
-      if (!ticket_trains.Exist(s_it->trainid, s_dept)) continue;
-      Train s_train{trains.Get(s_it->trainid, 0)}, t_train;
-      TicketTrain s_ticket{ticket_trains.Get(s_it->trainid, s_dept)};
+    for (auto s_it : dept_trains) {
+      s_dept = date - s_it.dept_time.day;
+      if (!ticket_trains.Exist(s_it.trainid, s_dept)) continue;
+      Train s_train{trains.Get(s_it.trainid, 0)}, t_train;
+      TicketTrain s_ticket{ticket_trains.Get(s_it.trainid, s_dept)};
       unordered_map<string, int> stat_order;
-      for (int i = s_it->order + 1; i < s_train.station_num; ++i)
+      for (int i = s_it.order + 1; i < s_train.station_num; ++i)
         stat_order[string(s_train.stations[i])] = i;
-      for (auto t_it = arr_trains.begin(); t_it != arr_trains.end(); ++t_it) {
-        if (s_it->train_id == t_it->train_id) continue;
-        t_train = trains.Get(t_it->trainid, 0);
-        for (int i = 0; i < t_it->order; ++i) {
+      for (auto t_it : arr_trains) {
+        if (s_it.train_id == t_it.train_id) continue;
+        t_train = trains.Get(t_it.trainid, 0);  // TODO : 可能会 TLE.
+        for (int i = 0; i < t_it.order; ++i) {
           string trans{string(t_train.stations[i])};
           if (stat_order.find(trans) == stat_order.end()) continue;
-          mid_s = {s_dept,
-                   s_train.start_time + s_train.arr_times[stat_order[trans]]};
+          s_time = s_train.start_time + s_train.arr_times[stat_order[trans]];
+          mid_s = {s_dept, s_time};
           // 接下来算出下一班车的理论最早发车日期。
-          t_dept =
-              mid_s.date - (t_train.start_time + t_train.dept_times[i]).day +
-              (t_train.dept_times[i] < s_train.arr_times[stat_order[trans]]);
+          t_time = t_train.start_time + t_train.dept_times[i];
+          t_dept = mid_s.date - t_time.day + (t_time < s_time);
+          // 时间的小于号不看 day.
           t_dept = std::max(t_dept, t_train.begin_date);
           if (t_dept > t_train.end_date) continue;
-          TicketTrain t_ticket{ticket_trains.Get(t_it->trainid, t_dept)};
+          TicketTrain t_ticket{ticket_trains.Get(t_it.trainid, t_dept)};
 
-          mid_t = {t_dept, t_train.start_time + t_train.dept_times[i]};
-          cur_cost = s_train.prices[stat_order[trans]] - s_it->price +
-                     t_it->price - t_train.prices[i];
+          mid_t = {t_dept, t_time};
+          cur_cost = s_train.prices[stat_order[trans]] - s_it.price +
+                     t_it.price - t_train.prices[i];
           cur_time = s_train.arr_times[stat_order[trans]] -
-                     s_train.dept_times[s_it->order] +
-                     t_train.arr_times[t_it->order] - t_train.dept_times[i] +
+                     s_train.dept_times[s_it.order] +
+                     t_train.arr_times[t_it.order] - t_train.dept_times[i] +
                      (mid_t - mid_s);
           bool is_better{0};
           if (!prior) {
             if (cur_time == the_time)
               if (cur_cost == the_cost)
-                if (train1.train_id == s_it->train_id)
-                  is_better = t_it->train_id < train2.train_id;
+                if (train1.train_id == s_it.train_id)
+                  is_better = t_it.train_id < train2.train_id;
                 else
-                  is_better = s_it->train_id < train2.train_id;
+                  is_better = s_it.train_id < train1.train_id;
               else
                 is_better = cur_cost < the_cost;
             else
@@ -324,10 +363,10 @@ class TrainManagement {
           } else {
             if (cur_cost == the_cost)
               if (cur_time == the_time)
-                if (train1.train_id == s_it->train_id)
-                  is_better = t_it->train_id < train2.train_id;
+                if (train1.train_id == s_it.train_id)
+                  is_better = t_it.train_id < train2.train_id;
                 else
-                  is_better = s_it->train_id < train2.train_id;
+                  is_better = s_it.train_id < train1.train_id;
               else
                 is_better = cur_time < the_time;
             else
@@ -337,18 +376,18 @@ class TrainManagement {
           if (is_better) {
             the_time = cur_time, the_cost = cur_cost;
             mid_str = trans;
-            train1 = {s_it->train_id,
-                      DateTime{s_dept, s_it->dept_time},
+            train1 = {s_it.train_id,
+                      DateTime{s_dept, s_it.dept_time},
                       mid_s,
                       0,  // 没有必要计算时间。
-                      s_train.prices[stat_order[trans]] - s_it->price,
-                      s_ticket.QueryTicket(s_it->order, stat_order[trans] - 1)};
-            train2 = {t_it->train_id,
+                      s_train.prices[stat_order[trans]] - s_it.price,
+                      s_ticket.QueryTicket(s_it.order, stat_order[trans] - 1)};
+            train2 = {t_it.train_id,
                       mid_t,
-                      DateTime{t_dept, t_it->arr_time},
+                      DateTime{t_dept, t_it.arr_time},
                       0,  // 没有必要计算时间。
-                      t_it->price - t_train.prices[i],
-                      t_ticket.QueryTicket(i, t_it->order - 1)};
+                      t_it.price - t_train.prices[i],
+                      t_ticket.QueryTicket(i, t_it.order - 1)};
           }
         }
       }
@@ -366,12 +405,61 @@ class TrainManagement {
     }
     return ret;
   }
+  // 用户已登录。
   string BuyTicket(const string &username, const string &train_id,
                    const Date &date, const string &dept, const string &arr,
-                   const int &cnt, const bool &will_wait) {
+                   const int &cnt, const bool &will_wait,
+                   const int &timestamp) {
     string ret;
-
+    size_t trainid{TrainIdHash(train_id)};
+    size_t deptid{StationHash(dept)}, arrid{StationHash(arr)};
+    StationTrain s_it, t_it;
+    if (!station_trains.Exist(deptid, trainid) ||
+        !station_trains.Exist(arrid, trainid))
+      return "-1";  // 蕴含判断发布。
+    s_it = station_trains.Get(deptid, trainid);
+    t_it = station_trains.Get(arrid, trainid);
+    if (s_it.order >= t_it.order) return "-1";
+    Date dept_date{date};
+    if (!ticket_trains.Exist(trainid, dept_date)) return "-1";
+    TicketTrain ticket{ticket_trains.Get(trainid, dept_date)};
+    if (ticket.seat < cnt) return "-1";
+    int left{ticket.QueryTicket(s_it.order, t_it.order - 1)};
+    if (left < cnt && !will_wait) return "-1";
+    Order the_order{timestamp,
+                    t_it.price - s_it.price,
+                    cnt,
+                    username,
+                    train_id,
+                    dept,
+                    arr,
+                    DateTime{dept_date, s_it.dept_time},
+                    DateTime{dept_date, t_it.arr_time}};
+    if (left >= cnt) {
+      ticket.BuyTickets(s_it.order, t_it.order - 1, cnt);
+      ticket_trains.Modify(trainid, dept_date, ticket);
+      the_order.status = Order::SUCCESS;
+      ret = std::to_string(1ll * cnt * (t_it.price - s_it.price));
+    } else {
+      // 注意：候补也要加入订单记录内。
+      the_order.status = Order::PENDING;
+      pending_orders.Insert({trainid, dept_date}, -timestamp, the_order);
+      ret = "queue";
+    }
+    orders.Insert(UserNameHash(username), -timestamp, the_order);
     return ret;
+  }
+  string QueryOrder(const string &username) {
+    string ret;
+    vector<Order> user_orders{orders.Traverse(UserNameHash(username))};
+    ret = std::to_string(user_orders.size());
+    for (auto it : user_orders) ret += '\n' + string(it);
+    return ret;
+  }
+  string RefundTicket(const string &username, const int &rank) {
+    string ret;
+    vector<Order> user_orders{orders.Traverse(UserNameHash(username))};
+    
   }
 };
 

@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 
+#include "../lib/exceptions.hpp"
+#include "../lib/utils.hpp"
 #include "commands.hpp"
 
 TicketSystem ticket_system;

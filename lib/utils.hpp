@@ -150,6 +150,9 @@ struct StrHash {
   }
 };
 
+StrHash<20> UserNameHash, TrainIdHash;
+StrHash<30> StationHash;
+
 struct Time {
   int day{0}, hour, min;
 
@@ -170,8 +173,8 @@ struct Time {
     return ret;
   }
   friend bool operator<(const Time &lhs, const Time &rhs) {
-    if (lhs.min == rhs.min) return lhs.hour < rhs.hour;
-    return lhs.min < rhs.min;
+    if (lhs.hour == rhs.hour) return lhs.min < rhs.min;
+    return lhs.hour < rhs.hour;
   }
 };
 
@@ -213,6 +216,9 @@ struct Date {
     return !(rhs < lhs);
   }
   friend bool operator>(const Date &lhs, const Date &rhs) { return rhs < lhs; }
+  friend bool operator>=(const Date &lhs, const Date &rhs) {
+    return !(lhs < rhs);
+  }
 };
 
 struct DateTime {

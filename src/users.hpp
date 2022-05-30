@@ -8,8 +8,6 @@
 #endif
 #include "../lib/utils.hpp"
 
-static StrHash<20> UserNameHash;
-
 class User {
   FixedStr<20> username;  // 为了文件存储需要定长。
   FixedStr<30> password;
@@ -34,7 +32,7 @@ class User {
   const int Privilege() const { return privilege; }
 
   void ChangePassword(const string &password_) { password = password_; }
-  void ChangeName(const string &name_) {name = name_; }
+  void ChangeName(const string &name_) { name = name_; }
   void ChangeMailAddr(const string &mail_) { mail_addr = mail_; }
   void ChangePrivilege(const int &privilege_) { privilege = privilege_; }
 };
@@ -46,6 +44,9 @@ class UserManagement {
  public:
   UserManagement() : users{"users_index.bin", "users.bin"} {}
 
+  bool IsLogin(const string &username) const {
+    return login.find(username) != login.cend();
+  }
   // 成功返回 1，失败返回 0.
   bool AddUser(const string &cur_username, const string &username,
                const string &password, const string &name,
@@ -53,8 +54,8 @@ class UserManagement {
     size_t userid = UserNameHash(username);
     if (!users.Size())
       privilege = 10;
-    else if (login.find(cur_username) == login.end() ||
-             login[cur_username] <= privilege || users.Exist(userid))
+    else if (!IsLogin(cur_username) || login[cur_username] <= privilege ||
+             users.Exist(userid))
       return 0;
     User new_user{username, password, name, mail_addr, privilege};
     users.Insert(userid, 0, new_user);
@@ -62,7 +63,7 @@ class UserManagement {
   }
   bool Login(const string &username, const string &password) {
     size_t userid = UserNameHash(username);
-    if (login.find(username) != login.end() || !users.Exist(userid)) return 0;
+    if (IsLogin(username) || !users.Exist(userid)) return 0;
     User target_user{users.Get(userid, 0)};
     if (password != target_user.Password()) return 0;
     return login[username] = target_user.Privilege(), 1;
@@ -70,8 +71,7 @@ class UserManagement {
   bool Logout(const string &username) { return login.erase(username); }
   string QueryProfile(const string &cur_username, const string &username) {
     size_t userid = UserNameHash(username);
-    if (login.find(cur_username) == login.end() || !users.Exist(userid))
-      return "-1";
+    if (!IsLogin(cur_username) || !users.Exist(userid)) return "-1";
     User target_user{users.Get(userid, 0)};
     if (cur_username != username &&
         login[cur_username] <= target_user.Privilege())
@@ -83,8 +83,7 @@ class UserManagement {
                        const string &password, const string &name,
                        const string &mail_addr, int &privilege) {
     size_t userid = UserNameHash(username);
-    if (login.find(cur_username) == login.end() || !users.Exist(userid))
-      return "-1";
+    if (!IsLogin(cur_username) || !users.Exist(userid)) return "-1";
     User target_user{users.Get(userid, 0)};
     if (cur_username != username &&
         login[cur_username] <= target_user.Privilege())
