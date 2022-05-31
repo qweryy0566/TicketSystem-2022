@@ -105,6 +105,7 @@ struct Order {
   enum Status { SUCCESS, PENDING, REFUNDED };
   Status status;
   int timestamp, price, cnt;
+  Date dept_date;
   FixedStr<20> username, train_id;
   FixedStr<30> dept, arr;
   int s_order, t_order;
@@ -126,7 +127,6 @@ struct Order {
 struct PendingInfo {
   int timestamp, need, s_order, t_order;
   size_t userid, trainid;
-  Date dept_date;
 };
 
 class TrainManagement {
@@ -413,36 +413,31 @@ class TrainManagement {
     s_it = station_trains.Get(deptid, trainid);
     t_it = station_trains.Get(arrid, trainid);
     if (s_it.order >= t_it.order) return "-1";
-    Date dept_date{date};
+    Date dept_date{date - s_it.dept_time.day};  // 始发站出发日期。
     if (!ticket_trains.Exist(trainid, dept_date)) return "-1";
     TicketTrain ticket{ticket_trains.Get(trainid, dept_date)};
     if (ticket.seat < cnt) return "-1";
     int left{ticket.QueryTicket(s_it.order, t_it.order - 1)};
     if (left < cnt && !will_wait) return "-1";
     Order the_order{Order::SUCCESS,  // 默认成功。
-                    timestamp,
-                    t_it.price - s_it.price,
-                    cnt,
-                    username,
-                    train_id,
-                    dept,
-                    arr,
-                    s_it.order,
-                    t_it.order,
+                    timestamp, t_it.price - s_it.price, cnt,
+                    dept_date,  // 记录火车始发时间确定是哪辆车。
+                    username, train_id, dept, arr, s_it.order, t_it.order,
                     DateTime{dept_date, s_it.dept_time},
+                    // 注意构造后日期不再是始发站出发日期。
                     DateTime{dept_date, t_it.arr_time}};
     if (left >= cnt) {
       ticket.BuyTickets(s_it.order, t_it.order - 1, cnt);
       ticket_trains.Modify(trainid, dept_date, ticket);
       ret = std::to_string(1ll * cnt * (t_it.price - s_it.price));
     } else {
-      // 注意：候补也要加入订单记录内。
       the_order.status = Order::PENDING;
-      PendingInfo pending_info{timestamp, cnt,     s_it.order, t_it.order,
-                               userid,    trainid, dept_date};
+      PendingInfo pending_info{timestamp,  cnt,    s_it.order,
+                               t_it.order, userid, trainid};
       pending_orders.Insert({trainid, dept_date}, -timestamp, pending_info);
       ret = "queue";
     }
+    // 注意：候补也要加入订单记录内。
     orders.Insert(userid, -timestamp, the_order);
     return ret;
   }
@@ -461,7 +456,7 @@ class TrainManagement {
     Order::Status old_status{the_order.status};
     the_order.status = Order::REFUNDED;
     int &timestamp = the_order.timestamp;
-    Date &dept_date = the_order.dept_time.date;
+    Date &dept_date = the_order.dept_date;
     size_t userid{UserNameHash(the_order.username)};
     size_t trainid{TrainIdHash(the_order.train_id)};
     orders.Modify(userid, -the_order.timestamp, the_order);
@@ -470,16 +465,18 @@ class TrainManagement {
     } else {
       TicketTrain ticket{ticket_trains.Get(trainid, dept_date)};
       // 把票买回去。
-      ticket.BuyTickets(the_order.s_order, the_order.t_order, -the_order.cnt);
+      ticket.BuyTickets(the_order.s_order, the_order.t_order - 1,  // 注意 -1.
+                        -the_order.cnt);
       vector<PendingInfo> pendings{
           pending_orders.Traverse({trainid, dept_date})};
       for (auto it : pendings)
         if (ticket.QueryTicket(it.s_order, it.t_order - 1) >= it.need) {
-          ticket.BuyTickets(it.s_order, it.t_order - 1, it.need);
-          pending_orders.Delete({it.trainid, it.dept_date}, -it.timestamp);
           the_order = orders.Get(it.userid, -it.timestamp);
           the_order.status = Order::SUCCESS;
+          ticket.BuyTickets(it.s_order, it.t_order - 1, it.need);
           orders.Modify(it.userid, -it.timestamp, the_order);
+          pending_orders.Delete({it.trainid, dept_date}, -it.timestamp);
+          // dept_date 是 the_order.dept_date 的别名。
         }
       ticket_trains.Modify(trainid, dept_date, ticket);
     }
