@@ -181,7 +181,6 @@ class vector {
     }
     return *this;
   }
-  vector &operator=(vector &&other) noexcept {}
 
   T &at(const size_t &pos) {
     if (pos < 0 || pos >= cur_size) throw index_out_of_bound();

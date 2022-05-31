@@ -8,7 +8,7 @@
 #include "vector.hpp"
 using fqj::vector;
 
-static const int Capacity=300;
+static const int Capacity=67;
 template<typename _key_type, typename _subkey_type, typename _value_type>
 struct Element{
     _key_type key;

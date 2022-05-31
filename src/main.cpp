@@ -12,6 +12,7 @@ int main() {
   std::ios::sync_with_stdio(0);
   std::cin.tie(0), std::cout.tie(0);
   std::string input, output;
+#ifdef DEBUG
   while (std::getline(cin, input)) try {
       output = ticket_system.Interprete(input);
       if (output.length()) {
@@ -20,8 +21,17 @@ int main() {
       }
     } catch (const Exception &exception) {
       std::cerr << exception.what() << '\n';
-    } catch(...) {
+    } catch (...) {
       std::cerr << "Invalid format!\n";
     }
+#else
+  while (std::getline(cin, input)) {
+    output = ticket_system.Interprete(input);
+    if (output.length()) {
+      std::cout << output << '\n';
+      if (output.substr(output.find(' ')) == " bye") break;
+    }
+  }
+#endif
   return 0;
 }

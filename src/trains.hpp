@@ -13,7 +13,7 @@ constexpr int kStNum = 101;  // 0-base
 struct Train {
   FixedStr<20> train_id;
   int seat_num, station_num;
-  FixedStr<30> stations[kStNum];
+  FixedStr<40> stations[kStNum];
   int prices[kStNum]{};      // 累计价格。
   int arr_times[kStNum]{};   // 到达累计时间。
   int dept_times[kStNum]{};  // 出发累计时间。
@@ -107,7 +107,7 @@ struct Order {
   int timestamp, price, cnt;
   Date dept_date;
   FixedStr<20> username, train_id;
-  FixedStr<30> dept, arr;
+  FixedStr<40> dept, arr;
   int s_order, t_order;
   DateTime dept_time, arr_time;
 

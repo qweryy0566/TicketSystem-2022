@@ -147,12 +147,12 @@ struct StrHash {
   size_t operator()(const FixedStr<len> &obj) const {
     size_t ret{0};
     for (int i = 0; i < len && obj[i]; ++i) ret = ret * 257 + obj[i];
-    return ret + std::hash<string>{}(string(obj));
+    return ret;
   }
 };
 
 StrHash<20> UserNameHash, TrainIdHash;
-StrHash<30> StationHash;
+StrHash<40> StationHash;
 
 struct Time {
   int day{0}, hour, min;

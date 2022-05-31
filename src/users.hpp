@@ -11,7 +11,7 @@
 class User {
   FixedStr<20> username;  // 为了文件存储需要定长。
   FixedStr<30> password;
-  FixedStr<15> name;
+  FixedStr<20> name;
   FixedStr<30> mail_addr;
   int privilege;
 
