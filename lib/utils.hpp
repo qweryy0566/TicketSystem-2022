@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <vector>
 
 #include "unordered_map.hpp"
 #include "vector.hpp"
@@ -146,7 +147,7 @@ struct StrHash {
   size_t operator()(const FixedStr<len> &obj) const {
     size_t ret{0};
     for (int i = 0; i < len && obj[i]; ++i) ret = ret * 257 + obj[i];
-    return ret;
+    return ret + std::hash<string>{}(string(obj));
   }
 };
 

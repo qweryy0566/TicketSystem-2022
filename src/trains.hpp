@@ -31,7 +31,7 @@ struct StationTrain {
 };
 class TicketTrain {
   // 维护每个站区间内的票数。
-  int tr[1 << 8], ltg[1 << 8];
+  int tr[1 << 8], ltg[1 << 8]{0};
   static int ql, qr, qv;
   void pushdown(int o) {
     tr[o << 1] += ltg[o], ltg[o << 1] += ltg[o];
@@ -53,7 +53,7 @@ class TicketTrain {
       tr[o] += qv, ltg[o] += qv;
       return;
     }
-    pushdown(o);
+    if (ltg[o]) pushdown(o);
     int mid{l + r >> 1};
     if (ql <= mid) update(o << 1, l, mid);
     if (qr > mid) update(o << 1 | 1, mid + 1, r);
@@ -61,7 +61,7 @@ class TicketTrain {
   }
   int query(int o, int l, int r) {
     if (ql <= l && r <= qr) return tr[o];
-    pushdown(o);
+    if (ltg[o]) pushdown(o);
     int mid{l + r >> 1}, ansl{INT32_MAX}, ansr{INT32_MAX};
     if (ql <= mid) ansl = query(o << 1, l, mid);
     if (qr > mid) ansr = query(o << 1 | 1, mid + 1, r);
@@ -77,8 +77,8 @@ class TicketTrain {
   int QueryTicket(int l, int r) {
     return ql = l, qr = r, query(1, 0, station_num - 2);
   }
-  void BuyTickets(int l, int r, int v) {
-    ql = l, qr = r, qv = v, update(1, 0, station_num - 2);
+  void BuyTickets(int l, int r, int v) {  // 买 v 张票，相当于加 -v 张。
+    ql = l, qr = r, qv = -v, update(1, 0, station_num - 2);
   }
 };
 int TicketTrain::ql, TicketTrain::qr, TicketTrain::qv;
@@ -137,9 +137,9 @@ class TrainManagement {
   BPlusTree<size_t, size_t, StationTrain> station_trains;
   // (trainid, date) -> ticket_of_train
   BPlusTree<size_t, Date, TicketTrain> ticket_trains;
-  // (userid, -timestamp) -> order
+  // (userid, -timestamp) -> order  后到先输出
   BPlusTree<size_t, int, Order> orders;
-  // (<trainid, date>, -timestamp) -> pending_info
+  // (<trainid, date>, timestamp) -> pending_info  先到先得
   BPlusTree<std::pair<size_t, Date>, int, PendingInfo> pending_orders;
 
  public:
@@ -274,8 +274,9 @@ class TrainManagement {
     vector<StationTrain> arr_trains{station_trains.Traverse(arrid)};
     vector<TicketResult> result;
     for (auto s_it = dept_trains.begin(), t_it = arr_trains.begin();
-         s_it != dept_trains.end() && t_it != arr_trains.end(); ++s_it) {
+         s_it != dept_trains.end(); ++s_it) {
       while (t_it != arr_trains.end() && t_it->trainid < s_it->trainid) ++t_it;
+      if (t_it == arr_trains.end()) break;
       if (s_it->train_id == t_it->train_id && s_it->order < t_it->order) {
         trainid = s_it->trainid;
         Date dept_date{date - s_it->dept_time.day};
@@ -434,7 +435,7 @@ class TrainManagement {
       the_order.status = Order::PENDING;
       PendingInfo pending_info{timestamp,  cnt,    s_it.order,
                                t_it.order, userid, trainid};
-      pending_orders.Insert({trainid, dept_date}, -timestamp, pending_info);
+      pending_orders.Insert({trainid, dept_date}, timestamp, pending_info);
       ret = "queue";
     }
     // 注意：候补也要加入订单记录内。
@@ -455,13 +456,12 @@ class TrainManagement {
     Order the_order{user_orders[rank - 1]};
     Order::Status old_status{the_order.status};
     the_order.status = Order::REFUNDED;
-    int &timestamp = the_order.timestamp;
-    Date &dept_date = the_order.dept_date;
+    Date dept_date{the_order.dept_date};
     size_t userid{UserNameHash(the_order.username)};
     size_t trainid{TrainIdHash(the_order.train_id)};
     orders.Modify(userid, -the_order.timestamp, the_order);
     if (old_status == Order::PENDING) {
-      pending_orders.Delete({trainid, dept_date}, -timestamp);
+      pending_orders.Delete({trainid, dept_date}, the_order.timestamp);
     } else {
       TicketTrain ticket{ticket_trains.Get(trainid, dept_date)};
       // 把票买回去。
@@ -471,12 +471,11 @@ class TrainManagement {
           pending_orders.Traverse({trainid, dept_date})};
       for (auto it : pendings)
         if (ticket.QueryTicket(it.s_order, it.t_order - 1) >= it.need) {
-          the_order = orders.Get(it.userid, -it.timestamp);
+          the_order = orders.Get(it.userid, -it.timestamp);          
           the_order.status = Order::SUCCESS;
           ticket.BuyTickets(it.s_order, it.t_order - 1, it.need);
           orders.Modify(it.userid, -it.timestamp, the_order);
-          pending_orders.Delete({it.trainid, dept_date}, -it.timestamp);
-          // dept_date 是 the_order.dept_date 的别名。
+          pending_orders.Delete({trainid, dept_date}, it.timestamp);
         }
       ticket_trains.Modify(trainid, dept_date, ticket);
     }

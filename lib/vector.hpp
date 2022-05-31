@@ -156,10 +156,13 @@ class vector {
   vector(int cnt = 9) : limit(cnt) {
     array = (T *)malloc(limit * sizeof(T));  // 注意区别申请大小与实际大小。
   }
-  vector(const vector &other) : cur_size(other.cur_size) {
-    limit = cur_size + 9;
+  vector(const vector &other) : cur_size(other.cur_size), limit(other.limit) {
     array = (T *)malloc(limit * sizeof(T));
     for (int i = 0; i < cur_size; ++i) new (array + i) T(other[i]);
+  }
+  vector(vector &&other) noexcept
+      : array(other.array), cur_size(other.cur_size), limit(other.limit) {
+    other.array = 0;
   }
   ~vector() {
     if (array) {
@@ -172,12 +175,13 @@ class vector {
     if (&other != this) {
       for (int i = 0; i < cur_size; ++i) array[i].~T();
       free(array);
-      cur_size = other.cur_size, limit = cur_size + 9;
+      cur_size = other.cur_size, limit = other.limit;
       array = (T *)malloc(limit * sizeof(T));
       for (int i = 0; i < cur_size; ++i) new (array + i) T(other[i]);
     }
     return *this;
   }
+  vector &operator=(vector &&other) noexcept {}
 
   T &at(const size_t &pos) {
     if (pos < 0 || pos >= cur_size) throw index_out_of_bound();

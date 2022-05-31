@@ -3,8 +3,7 @@
 
 #include <map>
 
-#include "map.hpp"
-#include "vector.hpp"
+#include "utils.hpp"
 
 template <typename _key_type, typename _subkey_type, typename _value_type>
 class BPlusTree {
@@ -36,9 +35,9 @@ class BPlusTree {
   _value_type Get(const _key_type &key, const _subkey_type &subkey) {
     return false_tree[std::make_pair(key, subkey)];
   }
-  fqj::vector<_value_type> Traverse(const _key_type &key) {
-    fqj::vector<_value_type> ret;
-    for (auto it{false_tree.lower_bound({key, size_t{0}})};
+  vector<_value_type> Traverse(const _key_type &key) {
+    vector<_value_type> ret{};
+    for (auto it{false_tree.lower_bound({key, std::numeric_limits<_subkey_type>::min()})};
          it != false_tree.end() && it->first.first == key; ++it)
       ret.push_back(it->second);
     return ret;
