@@ -6,13 +6,15 @@
 #include "commands.hpp"
 
 TicketSystem ticket_system;
+char read_buffer[1 << 20], write_buffer[1 << 20];
 
 int main() {
   srand(time(0));
   std::ios::sync_with_stdio(0);
   std::cin.tie(0), std::cout.tie(0);
+  std::cin.rdbuf()->pubsetbuf(read_buffer, sizeof(read_buffer));
+  std::cout.rdbuf()->pubsetbuf(write_buffer, sizeof(write_buffer));
   std::string input, output;
-#ifdef DEBUG
   while (std::getline(cin, input)) try {
       output = ticket_system.Interprete(input);
       if (output.length()) {
@@ -24,14 +26,5 @@ int main() {
     } catch (...) {
       std::cerr << "Invalid format!\n";
     }
-#else
-  while (std::getline(cin, input)) {
-    output = ticket_system.Interprete(input);
-    if (output.length()) {
-      std::cout << output << '\n';
-      if (output.substr(output.find(' ')) == " bye") break;
-    }
-  }
-#endif
   return 0;
 }
