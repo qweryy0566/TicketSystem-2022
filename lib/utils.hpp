@@ -150,7 +150,6 @@ struct StrHash {
     return ret;
   }
 };
-
 StrHash<20> UserNameHash, TrainIdHash;
 StrHash<40> StationHash;
 
@@ -247,6 +246,13 @@ struct DateTime {
   }
   friend std::ostream &operator<<(std::ostream &lhs, const DateTime &rhs) {
     return lhs << string(rhs);
+  }
+};
+
+template<class T1 = size_t, class T2 = Date>
+struct Hash {
+  size_t operator()(const pair<T1, T2> &obj) const {
+    return obj.first + int(obj.second);
   }
 };
 

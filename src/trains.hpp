@@ -8,9 +8,8 @@
 #endif
 #include "../lib/utils.hpp"
 
-constexpr int kStNum = 101;  // 0-base
-
 struct Train {
+  static constexpr int kStNum{100};  // 0-base
   FixedStr<20> train_id;
   int seat_num, station_num;
   FixedStr<40> stations[kStNum];
@@ -293,10 +292,10 @@ class TrainManagement {
     }
     fqj::Qsort(result.begin(), result.end(), ResultCmp[prior]);
     ret = std::to_string(result.size());
-    for (auto it = result.begin(); it != result.end(); ++it)
-      ret += '\n' + string(it->train_id) + ' ' + dept + ' ' +
-             string(it->dept_time) + " -> " + arr + ' ' + string(it->arr_time) +
-             ' ' + std::to_string(it->price) + ' ' + std::to_string(it->seat);
+    for (auto it : result)
+      ret += '\n' + string(it.train_id) + ' ' + dept + ' ' +
+             string(it.dept_time) + " -> " + arr + ' ' + string(it.arr_time) +
+             ' ' + std::to_string(it.price) + ' ' + std::to_string(it.seat);
     return ret;
   }
   string QueryTransfer(const string &dept, const string &arr, const Date &date,
@@ -310,18 +309,24 @@ class TrainManagement {
     vector<StationTrain> arr_trains{station_trains.Traverse(arrid)};
     TicketResult train1, train2;
     int the_time{INT32_MAX}, the_cost{INT32_MAX}, cur_cost, cur_time;
-
+    // 减少到达列车的 I/O 次数。
+    unordered_map<size_t, Train> t_trains;
+    unordered_map<pair<size_t, Date>, TicketTrain, Hash<>> t_tickets;
+    if (arr_trains.empty()) return ret;
     for (auto s_it : dept_trains) {
       s_dept = date - s_it.dept_time.day;
       if (!ticket_trains.Exist(s_it.trainid, s_dept)) continue;
       Train s_train{trains.Get(s_it.trainid, 0)}, t_train;
-      TicketTrain s_ticket{ticket_trains.Get(s_it.trainid, s_dept)};
+      TicketTrain s_ticket{ticket_trains.Get(s_it.trainid, s_dept)}, t_ticket;
       unordered_map<string, int> stat_order;
       for (int i = s_it.order + 1; i < s_train.station_num; ++i)
         stat_order[string(s_train.stations[i])] = i;
       for (auto t_it : arr_trains) {
         if (s_it.train_id == t_it.train_id) continue;
-        t_train = trains.Get(t_it.trainid, 0);  // TODO : 可能会 TLE.
+        if (t_trains.find(t_it.trainid) != t_trains.end())
+          t_train = t_trains[t_it.trainid];
+        else
+          t_trains[t_it.trainid] = t_train = trains.Get(t_it.trainid, 0);
         for (int i = 0; i < t_it.order; ++i) {
           string trans{string(t_train.stations[i])};
           if (stat_order.find(trans) == stat_order.end()) continue;
@@ -333,7 +338,11 @@ class TrainManagement {
           // 时间的小于号不看 day.
           t_dept = std::max(t_dept, t_train.begin_date);
           if (t_dept > t_train.end_date) continue;
-          TicketTrain t_ticket{ticket_trains.Get(t_it.trainid, t_dept)};
+          if (t_tickets.find({t_it.trainid, t_dept}) != t_tickets.end())
+            t_ticket = t_tickets[{t_it.trainid, t_dept}];
+          else
+            t_tickets[{t_it.trainid, t_dept}] = t_ticket =
+                ticket_trains.Get(t_it.trainid, t_dept);
 
           mid_t = {t_dept, t_time};
           cur_cost = s_train.prices[stat_order[trans]] - s_it.price +
@@ -386,7 +395,6 @@ class TrainManagement {
         }
       }
     }
-
     if (mid_str.length()) {
       ret = string(train1.train_id) + ' ' + dept + ' ' +
             string(train1.dept_time) + " -> " + mid_str + ' ' +
@@ -471,7 +479,7 @@ class TrainManagement {
           pending_orders.Traverse({trainid, dept_date})};
       for (auto it : pendings)
         if (ticket.QueryTicket(it.s_order, it.t_order - 1) >= it.need) {
-          the_order = orders.Get(it.userid, -it.timestamp);          
+          the_order = orders.Get(it.userid, -it.timestamp);
           the_order.status = Order::SUCCESS;
           ticket.BuyTickets(it.s_order, it.t_order - 1, it.need);
           orders.Modify(it.userid, -it.timestamp, the_order);
