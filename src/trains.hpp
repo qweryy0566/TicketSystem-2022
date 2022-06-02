@@ -18,17 +18,15 @@ struct Train {
   int dept_times[kStNum]{};  // 出发累计时间。
   Time start_time;
   Date begin_date, end_date;
-  char type;
+  char type{'\0'};
   bool is_release{0};
-
-  Train() : type{'\0'} {}  // '\0' 表示车为空。
 };
 
 struct StationTrain {
   size_t trainid;
   FixedStr<20> train_id;
   Time arr_time, dept_time;  // 里面存的是相对起点站发车的时间。
-  int order, price;
+  int order{-1}, price;
 };
 struct TrainDate {
   int station_num, seat;
@@ -36,57 +34,23 @@ struct TrainDate {
 };
 class TicketTrain {
   // 维护每个站区间内的票数。
-  int tr[254], ltg[254]{0};
-  static int ql, qr, qv;
-  void pushdown(int o) {
-    tr[o << 1] += ltg[o], ltg[o << 1] += ltg[o];
-    tr[o << 1 | 1] += ltg[o], ltg[o << 1 | 1] += ltg[o];
-    ltg[o] = 0;
-  }
-  void pushup(int o) { tr[o] = std::min(tr[o << 1], tr[o << 1 | 1]); }
-  void build(int o, int l, int r) {
-    if (l == r) {
-      tr[o] = seat;
-      return;
-    }
-    int mid{l + r >> 1};
-    build(o << 1, l, mid), build(o << 1 | 1, mid + 1, r);
-    pushup(o);
-  }
-  void update(int o, int l, int r) {
-    if (ql <= l && r <= qr) {
-      tr[o] += qv, ltg[o] += qv;
-      return;
-    }
-    if (ltg[o]) pushdown(o);
-    int mid{l + r >> 1};
-    if (ql <= mid) update(o << 1, l, mid);
-    if (qr > mid) update(o << 1 | 1, mid + 1, r);
-    pushup(o);
-  }
-  int query(int o, int l, int r) {
-    if (ql <= l && r <= qr) return tr[o];
-    if (ltg[o]) pushdown(o);
-    int mid{l + r >> 1}, ansl{INT32_MAX}, ansr{INT32_MAX};
-    if (ql <= mid) ansl = query(o << 1, l, mid);
-    if (qr > mid) ansr = query(o << 1 | 1, mid + 1, r);
-    return std::min(ansl, ansr);
-  }
+  int cnt[100];
 
  public:
   int station_num, seat;
   TicketTrain() : seat{-1} {};
   TicketTrain(const int &num, const int &seat) : station_num{num}, seat{seat} {
-    build(1, 0, station_num - 2);  // 管该站到下一站的票数。
+    for (int i = 0; i < station_num - 1; ++i) cnt[i] = seat;
   }
   int QueryTicket(int l, int r) {
-    return ql = l, qr = r, query(1, 0, station_num - 2);
+    int ans{cnt[l]};
+    for (int i = l + 1; i <= r; ++i) ans = std::min(ans, cnt[i]);
+    return ans;
   }
   void BuyTickets(int l, int r, int v) {  // 买 v 张票，相当于加 -v 张。
-    ql = l, qr = r, qv = -v, update(1, 0, station_num - 2);
+    for (int i = l; i <= r; ++i) cnt[i] -= v;
   }
 };
-int TicketTrain::ql, TicketTrain::qr, TicketTrain::qv;
 
 struct TicketResult {
   FixedStr<20> train_id;
@@ -137,13 +101,12 @@ struct PendingInfo {
 class TrainManagement {
   // trainid -> train
   BPlusTree<size_t, int, Train, 339, 2> trains;
-  // 接下来的 BPT 均是在 release 时更改。
-  // trainid -> pair(begin_date, end_date)
+  // trainid -> train_date
   BPlusTree<size_t, int, TrainDate, 339, 203> train_dates;
   // (stationid, trainid) -> station_train
   BPlusTree<size_t, size_t, StationTrain, 339, 101> station_trains;
   // (trainid, date) -> ticket_of_train
-  BPlusTree<size_t, Date, TicketTrain, 339, 7> ticket_trains;
+  BPlusTree<size_t, Date, TicketTrain, 339, 18> ticket_trains;
   // (userid, -timestamp) -> order  后到先输出
   BPlusTree<size_t, int, Order, 339, 38> orders;
   // (<trainid, date>, timestamp) -> pending_info  先到先得
@@ -429,12 +392,10 @@ class TrainManagement {
     size_t userid{UserNameHash(username)}, trainid{TrainIdHash(train_id)};
     size_t deptid{StationHash(dept)}, arrid{StationHash(arr)};
     StationTrain s_it, t_it;
-    if (!station_trains.Exist(deptid, trainid) ||
-        !station_trains.Exist(arrid, trainid))
-      return "-1";  // 蕴含判断发布。
     s_it = station_trains.Get(deptid, trainid);
     t_it = station_trains.Get(arrid, trainid);
-    if (s_it.order >= t_it.order) return "-1";
+    // 蕴含判断发布。
+    if (!~s_it.order || !~t_it.order || s_it.order >= t_it.order) return "-1";
     Date dept_date{date - s_it.dept_time.day};  // 始发站出发日期。
     TrainDate seg{train_dates.Get(trainid, 0)};
     if (dept_date < seg.begin || seg.end < dept_date || seg.seat < cnt)

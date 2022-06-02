@@ -16,7 +16,7 @@ class User {
   int privilege;
 
  public:
-  User(){};
+  User() : privilege{-1} {};
   User(const string &username_, const string &password_, const string &name_,
        const string &mail_, const int &privilege_)
       : username{username_},
@@ -63,18 +63,20 @@ class UserManagement {
   }
   bool Login(const string &username, const string &password) {
     size_t userid = UserNameHash(username);
-    if (IsLogin(username) || !users.Exist(userid)) return 0;
+    if (IsLogin(username)) return 0;
     User target_user{users.Get(userid, 0)};
-    if (password != target_user.Password()) return 0;
+    if (!~target_user.Privilege() || password != target_user.Password())
+      return 0;
     return login[username] = target_user.Privilege(), 1;
   }
   bool Logout(const string &username) { return login.erase(username); }
   string QueryProfile(const string &cur_username, const string &username) {
     size_t userid = UserNameHash(username);
-    if (!IsLogin(cur_username) || !users.Exist(userid)) return "-1";
+    if (!IsLogin(cur_username)) return "-1";
     User target_user{users.Get(userid, 0)};
-    if (cur_username != username &&
-        login[cur_username] <= target_user.Privilege())
+    if (!~target_user.Privilege() ||
+        cur_username != username &&
+            login[cur_username] <= target_user.Privilege())
       return "-1";
     return username + " " + target_user.Name() + " " + target_user.MailAddr() +
            " " + std::to_string(target_user.Privilege());
@@ -83,10 +85,11 @@ class UserManagement {
                        const string &password, const string &name,
                        const string &mail_addr, int &privilege) {
     size_t userid = UserNameHash(username);
-    if (!IsLogin(cur_username) || !users.Exist(userid)) return "-1";
+    if (!IsLogin(cur_username)) return "-1";
     User target_user{users.Get(userid, 0)};
-    if (cur_username != username &&
-        login[cur_username] <= target_user.Privilege())
+    if (!~target_user.Privilege() ||
+        cur_username != username &&
+            login[cur_username] <= target_user.Privilege())
       return "-1";
     // 权限默认 -1.
     if (~privilege) {
