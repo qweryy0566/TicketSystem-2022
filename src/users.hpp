@@ -38,7 +38,7 @@ class User {
 };
 
 class UserManagement {
-  BPlusTree<size_t, int, User> users;  // username_hash -> user
+  BPlusTree<size_t, int, User, 339, 67> users;  // username_hash -> user
   unordered_map<string, int> login;
 
  public:

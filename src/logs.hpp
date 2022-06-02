@@ -9,10 +9,10 @@
 
 class LogManagement {
   // 按时间戳存命令。
-  BPlusTree<int, int, std::string> logs;
+  // BPlusTree<int, int, std::string> logs;
 
  public:
-  LogManagement() : logs{"logs_index.bin", "logs.bin"} {}
+  // LogManagement() : logs{"logs_index.bin", "logs.bin"} {}
   void AddLog(const int &timestamp, const std::string &cmd) {
     
   }

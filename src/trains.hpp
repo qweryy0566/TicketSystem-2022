@@ -130,16 +130,16 @@ struct PendingInfo {
 
 class TrainManagement {
   // trainid -> train
-  BPlusTree<size_t, int, Train> trains;
+  BPlusTree<size_t, int, Train, 339, 2> trains;
   // 接下来的 BPT 均是在 release 时更改。
   // (stationid, trainid) -> station_train
-  BPlusTree<size_t, size_t, StationTrain> station_trains;
+  BPlusTree<size_t, size_t, StationTrain, 339, 101> station_trains;
   // (trainid, date) -> ticket_of_train
-  BPlusTree<size_t, Date, TicketTrain> ticket_trains;
+  BPlusTree<size_t, Date, TicketTrain, 339, 6> ticket_trains;
   // (userid, -timestamp) -> order  后到先输出
-  BPlusTree<size_t, int, Order> orders;
+  BPlusTree<size_t, int, Order, 339, 38> orders;
   // (<trainid, date>, timestamp) -> pending_info  先到先得
-  BPlusTree<std::pair<size_t, Date>, int, PendingInfo> pending_orders;
+  BPlusTree<pair<size_t, Date>, int, PendingInfo, 254, 144> pending_orders;
 
  public:
   TrainManagement()
