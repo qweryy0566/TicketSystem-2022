@@ -3,14 +3,12 @@
 
 #include "../lib/exceptions.hpp"
 #include "../lib/utils.hpp"
-#include "logs.hpp"
 #include "trains.hpp"
 #include "users.hpp"
 
 class TicketSystem {
   UserManagement user_manager;
   TrainManagement train_manager;
-  // LogManagement log_manager;
 
  public:
   string Interprete(TokenScanner);
