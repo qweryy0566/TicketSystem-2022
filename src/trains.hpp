@@ -20,6 +20,8 @@ struct Train {
   Date begin_date, end_date;
   char type;
   bool is_release{0};
+
+  Train() : type{'\0'} {}  // '\0' 表示车为空。
 };
 
 struct StationTrain {
@@ -28,9 +30,13 @@ struct StationTrain {
   Time arr_time, dept_time;  // 里面存的是相对起点站发车的时间。
   int order, price;
 };
+struct TrainDate {
+  int station_num, seat;
+  Date begin, end;
+};
 class TicketTrain {
   // 维护每个站区间内的票数。
-  int tr[1 << 8], ltg[1 << 8]{0};
+  int tr[254], ltg[254]{0};
   static int ql, qr, qv;
   void pushdown(int o) {
     tr[o << 1] += ltg[o], ltg[o << 1] += ltg[o];
@@ -69,7 +75,7 @@ class TicketTrain {
 
  public:
   int station_num, seat;
-  TicketTrain() = default;
+  TicketTrain() : seat{-1} {};
   TicketTrain(const int &num, const int &seat) : station_num{num}, seat{seat} {
     build(1, 0, station_num - 2);  // 管该站到下一站的票数。
   }
@@ -132,10 +138,12 @@ class TrainManagement {
   // trainid -> train
   BPlusTree<size_t, int, Train, 339, 2> trains;
   // 接下来的 BPT 均是在 release 时更改。
+  // trainid -> pair(begin_date, end_date)
+  BPlusTree<size_t, int, TrainDate, 339, 203> train_dates;
   // (stationid, trainid) -> station_train
   BPlusTree<size_t, size_t, StationTrain, 339, 101> station_trains;
   // (trainid, date) -> ticket_of_train
-  BPlusTree<size_t, Date, TicketTrain, 339, 6> ticket_trains;
+  BPlusTree<size_t, Date, TicketTrain, 339, 7> ticket_trains;
   // (userid, -timestamp) -> order  后到先输出
   BPlusTree<size_t, int, Order, 339, 38> orders;
   // (<trainid, date>, timestamp) -> pending_info  先到先得
@@ -144,6 +152,7 @@ class TrainManagement {
  public:
   TrainManagement()
       : trains{"trains_index.bin", "trains.bin"},
+        train_dates{"train_dates_index.bin", "train_dates.bin"},
         station_trains{"station_trains_index.bin", "station_trains.bin"},
         ticket_trains{"ticket_trains_index.bin", "ticket_trains.bin"},
         orders{"orders_index.bin", "orders.bin"},
@@ -205,20 +214,20 @@ class TrainManagement {
 
   bool DeleteTrain(const string &train_id) {
     size_t trainid{TrainIdHash(train_id)};
-    if (!trains.Exist(trainid) || trains.Get(trainid, 0).is_release) return 0;
-    return trains.Delete(trainid, 0), 1;
+    Train the_train{trains.Get(trainid, 0)};
+    if (!the_train.type || the_train.is_release) return 0;
+    return trains.Delete(trainid, 0);
   }
 
   bool ReleaseTrain(const string &train_id) {
     size_t trainid{TrainIdHash(train_id)};
-    if (!trains.Exist(trainid)) return 0;
     Train the_train{trains.Get(trainid, 0)};
-    if (the_train.is_release) return 0;
+    if (!the_train.type || the_train.is_release) return 0;
     the_train.is_release = 1;
     trains.Modify(trainid, 0, the_train);
-    for (Date i = the_train.begin_date; i <= the_train.end_date; ++i)
-      ticket_trains.Insert(
-          trainid, i, TicketTrain{the_train.station_num, the_train.seat_num});
+    train_dates.Insert(trainid, 0,
+                       {the_train.station_num, the_train.seat_num,
+                        the_train.begin_date, the_train.end_date});
     for (int i = 0; i < the_train.station_num; ++i) {
       station_trains.Insert(
           StationHash(the_train.stations[i]), trainid,
@@ -233,9 +242,8 @@ class TrainManagement {
   string QueryTrain(const Date &date, const string &train_id) {
     string ret{"-1"};
     size_t trainid{TrainIdHash(train_id)};
-    Train the_train;
-    if (trains.Exist(trainid)) {
-      the_train = trains.Get(trainid, 0);
+    Train the_train{trains.Get(trainid, 0)};
+    if (the_train.type) {
       if (date < the_train.begin_date || date > the_train.end_date)
         return ret;  // 日期不在范围内。
       ret = train_id + ' ' + the_train.type + '\n';
@@ -256,7 +264,7 @@ class TrainManagement {
         ret += std::to_string(the_train.prices[i]) + ' ';
         if (i + 1 == the_train.station_num)
           ret += 'x';
-        else if (the_train.is_release)
+        else if (~ticket.seat)  // != -1
           ret += std::to_string(ticket.QueryTicket(i, i)) + '\n';
         else
           ret += std::to_string(the_train.seat_num) + '\n';
@@ -272,6 +280,7 @@ class TrainManagement {
     vector<StationTrain> dept_trains{station_trains.Traverse(deptid)};
     vector<StationTrain> arr_trains{station_trains.Traverse(arrid)};
     vector<TicketResult> result;
+    TicketTrain ticket;
     for (auto s_it = dept_trains.begin(), t_it = arr_trains.begin();
          s_it != dept_trains.end(); ++s_it) {
       while (t_it != arr_trains.end() && t_it->trainid < s_it->trainid) ++t_it;
@@ -279,15 +288,16 @@ class TrainManagement {
       if (s_it->train_id == t_it->train_id && s_it->order < t_it->order) {
         trainid = s_it->trainid;
         Date dept_date{date - s_it->dept_time.day};
-        if (ticket_trains.Exist(trainid, dept_date)) {
-          TicketTrain ticket{ticket_trains.Get(trainid, dept_date)};
-          result.push_back({s_it->train_id,
-                            DateTime{dept_date, s_it->dept_time},
-                            DateTime{dept_date, t_it->arr_time},
-                            int(t_it->arr_time) - int(s_it->dept_time),
-                            t_it->price - s_it->price,
-                            ticket.QueryTicket(s_it->order, t_it->order - 1)});
-        }
+        TrainDate seg{train_dates.Get(trainid, 0)};  // 一定发布过了。
+        if (dept_date < seg.begin || seg.end < dept_date) continue;
+        ticket = ticket_trains.Get(trainid, dept_date);
+        result.push_back({s_it->train_id, DateTime{dept_date, s_it->dept_time},
+                          DateTime{dept_date, t_it->arr_time},
+                          int(t_it->arr_time) - int(s_it->dept_time),
+                          t_it->price - s_it->price,
+                          ~ticket.seat
+                              ? ticket.QueryTicket(s_it->order, t_it->order - 1)
+                              : seg.seat});
       }
     }
     fqj::Qsort(result.begin(), result.end(), ResultCmp[prior]);
@@ -315,8 +325,8 @@ class TrainManagement {
     if (arr_trains.empty()) return ret;
     for (auto s_it : dept_trains) {
       s_dept = date - s_it.dept_time.day;
-      if (!ticket_trains.Exist(s_it.trainid, s_dept)) continue;
       Train s_train{trains.Get(s_it.trainid, 0)}, t_train;
+      if (s_dept < s_train.begin_date || s_train.end_date < s_dept) continue;
       TicketTrain s_ticket{ticket_trains.Get(s_it.trainid, s_dept)}, t_ticket;
       unordered_map<string, int> stat_order;
       for (int i = s_it.order + 1; i < s_train.station_num; ++i)
@@ -384,13 +394,16 @@ class TrainManagement {
                       mid_s,
                       0,  // 没有必要计算时间。
                       s_train.prices[stat_order[trans]] - s_it.price,
-                      s_ticket.QueryTicket(s_it.order, stat_order[trans] - 1)};
+                      ~s_ticket.seat ? s_ticket.QueryTicket(
+                                           s_it.order, stat_order[trans] - 1)
+                                     : s_train.seat_num};
             train2 = {t_it.train_id,
                       mid_t,
                       DateTime{t_dept, t_it.arr_time},
                       0,  // 没有必要计算时间。
                       t_it.price - t_train.prices[i],
-                      t_ticket.QueryTicket(i, t_it.order - 1)};
+                      ~t_ticket.seat ? t_ticket.QueryTicket(i, t_it.order - 1)
+                                     : t_train.seat_num};
           }
         }
       }
@@ -423,10 +436,16 @@ class TrainManagement {
     t_it = station_trains.Get(arrid, trainid);
     if (s_it.order >= t_it.order) return "-1";
     Date dept_date{date - s_it.dept_time.day};  // 始发站出发日期。
-    if (!ticket_trains.Exist(trainid, dept_date)) return "-1";
+    TrainDate seg{train_dates.Get(trainid, 0)};
+    if (dept_date < seg.begin || seg.end < dept_date || seg.seat < cnt)
+      return "-1";
     TicketTrain ticket{ticket_trains.Get(trainid, dept_date)};
-    if (ticket.seat < cnt) return "-1";
-    int left{ticket.QueryTicket(s_it.order, t_it.order - 1)};
+    int left;
+    bool is_buy{ticket.seat != -1};
+    if (!is_buy)
+      ticket = TicketTrain{seg.station_num, seg.seat}, left = seg.seat;
+    else
+      left = ticket.QueryTicket(s_it.order, t_it.order - 1);
     if (left < cnt && !will_wait) return "-1";
     Order the_order{Order::SUCCESS,  // 默认成功。
                     timestamp, t_it.price - s_it.price, cnt,
@@ -437,7 +456,10 @@ class TrainManagement {
                     DateTime{dept_date, t_it.arr_time}};
     if (left >= cnt) {
       ticket.BuyTickets(s_it.order, t_it.order - 1, cnt);
-      ticket_trains.Modify(trainid, dept_date, ticket);
+      if (is_buy)
+        ticket_trains.Modify(trainid, dept_date, ticket);
+      else
+        ticket_trains.Insert(trainid, dept_date, ticket);
       ret = std::to_string(1ll * cnt * (t_it.price - s_it.price));
     } else {
       the_order.status = Order::PENDING;
