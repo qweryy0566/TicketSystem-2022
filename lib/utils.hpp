@@ -249,10 +249,22 @@ struct DateTime {
   }
 };
 
-template<class T1 = size_t, class T2 = Date>
+template<class T1, class T2>
 struct PairHash {
   size_t operator()(const pair<T1, T2> &obj) const {
+    return obj.first + obj.second;
+  }
+};
+template<>
+struct PairHash<size_t, Date> {
+  size_t operator()(const pair<size_t, Date> &obj) const {
     return obj.first + int(obj.second);
+  }
+};
+template<>
+struct PairHash<pair<size_t, Date>, int> {
+  size_t operator()(const pair<pair<size_t, Date>, int> &obj) const {
+    return PairHash<size_t, Date>{}(obj.first) + int(obj.second);
   }
 };
 

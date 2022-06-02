@@ -5,8 +5,7 @@
 #include <limits>
 #include <iostream>
 
-#include "vector.hpp"
-using fqj::vector;
+#include "utils.hpp"
 
 template<typename _key_type, typename _subkey_type, typename _value_type>
 struct Element{
@@ -67,9 +66,17 @@ template <typename _key_type,typename _subkey_type,typename _value_type, int M, 
 class BPlusTree{
     std::fstream file_node_;
     std::fstream file_block_;
+    const size_t cache_size;
+    unordered_map<pair<_key_type, _subkey_type>, _value_type, PairHash<_key_type, _subkey_type>> cache;
 public:
     std::string filename_node;
     std::string filename_block;
+
+    // CACHE
+    void ToCache(const _key_type& key, const _subkey_type& subkey, const _value_type& value) {
+        cache[{key, subkey}] = value;
+        if (cache.size() > cache_size) cache.erase(cache.begin());
+    }
 
     long long int GetValidPosition(int tag){//tag==1 return for a node, else for a block
         long long int ans=0;
@@ -170,7 +177,10 @@ public:
         }
     }
     
-    BPlusTree(std::string name1,std::string name2):filename_node(name1),filename_block(name2){
+    BPlusTree(std::string name1,std::string name2):
+    // CACHE
+    cache_size{(1 << 17) / sizeof(pair<pair<_key_type, _subkey_type>, _value_type>)},
+    filename_node(name1),filename_block(name2){
         file_node_.open(filename_node);
         if(!file_node_){
             file_node_.open(filename_node,std::ofstream::out);
@@ -218,6 +228,8 @@ public:
     }
 
     void Initialize(){
+        // CACHE
+        cache.clear();
         file_node_.open(filename_node);
         int count_all=0;
         file_node_.seekp(0);
@@ -475,6 +487,8 @@ public:
     }
 
     bool Delete(const _key_type& key, const _subkey_type& subkey) {
+        // CACHE
+        cache.erase({key, subkey});
         Element<_key_type, _subkey_type, _value_type> targeted_element;
         targeted_element.key = key;
         targeted_element.subkey = subkey;
@@ -924,6 +938,8 @@ public:
     }
 
     bool Modify(const _key_type& key, const _subkey_type& subkey, const _value_type& value){
+        // CACHE
+        ToCache(key, subkey, value);
         file_node_.open(filename_node);
         file_block_.open(filename_block);
         int count_all=0;
@@ -1323,6 +1339,9 @@ public:
     }
 
     [[nodiscard]] _value_type Get(const _key_type& key, const _subkey_type& subkey){
+        // CACHE
+        if (cache.find({key, subkey}) != cache.cend())
+            return cache[{key, subkey}];
         file_node_.open(filename_node);
         file_block_.open(filename_block);
         int count_all=0;
@@ -1388,6 +1407,8 @@ public:
             return _value_type();
         }
         else{
+            // CACHE
+            ToCache(key, subkey, test_block.array_element[ind].value);
             return test_block.array_element[ind].value;
         }
     }
