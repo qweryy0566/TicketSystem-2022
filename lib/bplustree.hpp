@@ -63,7 +63,7 @@ struct Block{
     long long int next=0;
 };
 
-template <typename _key_type,typename _subkey_type,typename _value_type, int M = 67, int L = 67>
+template <typename _key_type,typename _subkey_type,typename _value_type, int M, int L>
 class BPlusTree{
     std::fstream file_node_;
     std::fstream file_block_;

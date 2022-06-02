@@ -284,7 +284,7 @@ class TrainManagement {
     int the_time{INT32_MAX}, the_cost{INT32_MAX}, cur_cost, cur_time;
     // 减少到达列车的 I/O 次数。
     unordered_map<size_t, Train> t_trains;
-    unordered_map<pair<size_t, Date>, TicketTrain, Hash<>> t_tickets;
+    unordered_map<pair<size_t, Date>, TicketTrain, PairHash<>> t_tickets;
     if (arr_trains.empty()) return ret;
     for (auto s_it : dept_trains) {
       s_dept = date - s_it.dept_time.day;

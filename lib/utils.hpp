@@ -250,7 +250,7 @@ struct DateTime {
 };
 
 template<class T1 = size_t, class T2 = Date>
-struct Hash {
+struct PairHash {
   size_t operator()(const pair<T1, T2> &obj) const {
     return obj.first + int(obj.second);
   }
