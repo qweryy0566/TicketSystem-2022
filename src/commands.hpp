@@ -10,7 +10,7 @@
 class TicketSystem {
   UserManagement user_manager;
   TrainManagement train_manager;
-  LogManagement log_manager;
+  // LogManagement log_manager;
 
  public:
   string Interprete(TokenScanner);
