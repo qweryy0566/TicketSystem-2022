@@ -13,6 +13,6 @@
 
 ## 关于本作业
 
-- 甲方要求在这里（好像库被删了？）
+- 甲方要求在[这里](https://hub.fastgit.xyz/ACMClassCourse-2021/TicketSystem/blob/master/README.md)
 - 开发文档在[这里](https://github.com/qweryy0566/TicketSystem-2022/blob/master/docs/%E5%BC%80%E5%8F%91%E6%96%87%E6%A1%A3.md)
 - 前端文档在[这里](https://github.com/qweryy0566/TicketSystem-2022/blob/master/docs/%E5%89%8D%E7%AB%AF%20%E5%BC%80%E5%8F%91%E6%96%87%E6%A1%A3.md)

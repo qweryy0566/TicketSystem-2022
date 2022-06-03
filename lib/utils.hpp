@@ -264,7 +264,7 @@ struct PairHash<size_t, Date> {
 template<>
 struct PairHash<pair<size_t, Date>, int> {
   size_t operator()(const pair<pair<size_t, Date>, int> &obj) const {
-    return PairHash<size_t, Date>{}(obj.first) + int(obj.second);
+    return PairHash<size_t, Date>{}(obj.first) + obj.second;
   }
 };
 
