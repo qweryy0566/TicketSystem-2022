@@ -282,6 +282,9 @@ class TrainManagement {
     unordered_map<size_t, Train> t_trains;
     unordered_map<pair<size_t, Date>, TicketTrain, PairHash<size_t, Date>>
         t_tickets;
+    size_t size_trains{(1 << 20) / sizeof(pair<size_t, Train>)};
+    size_t size_tickets{(1 << 20) /
+                        sizeof(pair<pair<size_t, Date>, TicketTrain>)};
     if (arr_trains.empty()) return ret;
     for (auto s_it : dept_trains) {
       s_dept = date - s_it.dept_time.day;
@@ -295,8 +298,10 @@ class TrainManagement {
         if (s_it.train_id == t_it.train_id) continue;
         if (t_trains.find(t_it.trainid) != t_trains.end())
           t_train = t_trains[t_it.trainid];
-        else
+        else {
           t_trains[t_it.trainid] = t_train = trains.Get(t_it.trainid, 0);
+          if (t_trains.size() > size_trains) t_trains.erase(t_trains.begin());
+        }
         for (int i = 0; i < t_it.order; ++i) {
           string trans{string(t_train.stations[i])};
           if (stat_order.find(trans) == stat_order.end()) continue;
@@ -310,9 +315,12 @@ class TrainManagement {
           if (t_dept > t_train.end_date) continue;
           if (t_tickets.find({t_it.trainid, t_dept}) != t_tickets.end())
             t_ticket = t_tickets[{t_it.trainid, t_dept}];
-          else
+          else {
             t_tickets[{t_it.trainid, t_dept}] = t_ticket =
                 ticket_trains.Get(t_it.trainid, t_dept);
+            if (t_tickets.size() > size_tickets)
+              t_tickets.erase(t_tickets.begin());
+          }
 
           mid_t = {t_dept, t_time};
           cur_cost = s_train.prices[stat_order[trans]] - s_it.price +
