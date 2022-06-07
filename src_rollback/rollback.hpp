@@ -75,9 +75,9 @@ class BptPlus {
   }
 
   void RollBack(const int &timestamp, const int &now) {
-    int pos{now};
+    int pos{now}, step{(1 << 23) / sizeof(History)};
     do {
-      pos = std::max(timestamp, pos - 100000);
+      pos = std::max(timestamp, pos - step);
       vector<History> opts{history.GetSuf(pos)};
       for (int i = opts.size() - 1; ~i; --i) {
         if (opts[i].opt == History::INSERT)
