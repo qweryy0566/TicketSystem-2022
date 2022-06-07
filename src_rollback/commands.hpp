@@ -1,5 +1,5 @@
-#ifndef TICKETSYSTEM_COMMANDS_HPP_
-#define TICKETSYSTEM_COMMANDS_HPP_
+#ifndef TICKETSYSTEM_ROLLBACK_COMMANDS_HPP_
+#define TICKETSYSTEM_ROLLBACK_COMMANDS_HPP_
 
 #include "../lib/exceptions.hpp"
 #include "../lib/utils.hpp"
@@ -12,21 +12,21 @@ class TicketSystem {
 
  public:
   string Interprete(TokenScanner);
-  string VisitAddUser(TokenScanner &);
+  string VisitAddUser(const int &, TokenScanner &);
   string VisitLogin(TokenScanner &);
   string VisitLogout(TokenScanner &);
   string VisitQueryProfile(TokenScanner &);
-  string VisitModifyProfile(TokenScanner &);
-  string VisitAddTrain(TokenScanner &);
-  string VisitDeleteTrain(TokenScanner &);
-  string VisitReleaseTrain(TokenScanner &);
+  string VisitModifyProfile(const int &, TokenScanner &);
+  string VisitAddTrain(const int &, TokenScanner &);
+  string VisitDeleteTrain(const int &, TokenScanner &);
+  string VisitReleaseTrain(const int &, TokenScanner &);
   string VisitQueryTrain(TokenScanner &);
   string VisitQueryTicket(TokenScanner &);
   string VisitQueryTransfer(TokenScanner &);
   string VisitBuyTicket(const int &, TokenScanner &);
   string VisitQueryOrder(TokenScanner &);
-  string VisitRefundTicket(TokenScanner &);
-  string VisitRollback(TokenScanner &);
+  string VisitRefundTicket(const int &, TokenScanner &);
+  string VisitRollback(const int &, TokenScanner &);
   string VisitClean();
 };
 
@@ -35,14 +35,12 @@ string TicketSystem::Interprete(TokenScanner token) {
   key = token.NextToken('[', ']');
   if (!key.length()) return "";
   int timestamp{std::stoi(key)};
-  // TODO : timestamp && rollback
-  // log_manager.AddLog(timestamp, token.Getleft());
   ret = "[" + key + "] ";
   key = token.NextToken();
   if (key == "exit") {
     ret += "bye";
   } else if (key == "add_user") {
-    ret += VisitAddUser(token);
+    ret += VisitAddUser(timestamp, token);
   } else if (key == "login") {
     ret += VisitLogin(token);
   } else if (key == "logout") {
@@ -50,13 +48,13 @@ string TicketSystem::Interprete(TokenScanner token) {
   } else if (key == "query_profile") {
     ret += VisitQueryProfile(token);
   } else if (key == "modify_profile") {
-    ret += VisitModifyProfile(token);
+    ret += VisitModifyProfile(timestamp, token);
   } else if (key == "add_train") {
-    ret += VisitAddTrain(token);
+    ret += VisitAddTrain(timestamp, token);
   } else if (key == "delete_train") {
-    ret += VisitDeleteTrain(token);
+    ret += VisitDeleteTrain(timestamp, token);
   } else if (key == "release_train") {
-    ret += VisitReleaseTrain(token);
+    ret += VisitReleaseTrain(timestamp, token);
   } else if (key == "query_train") {
     ret += VisitQueryTrain(token);
   } else if (key == "query_ticket") {
@@ -68,9 +66,9 @@ string TicketSystem::Interprete(TokenScanner token) {
   } else if (key == "query_order") {
     ret += VisitQueryOrder(token);
   } else if (key == "refund_ticket") {
-    ret += VisitRefundTicket(token);
+    ret += VisitRefundTicket(timestamp, token);
   } else if (key == "rollback") {
-    ret += VisitRollback(token);
+    ret += VisitRollback(timestamp, token);
   } else if (key == "clean") {
     ret += VisitClean();
   } else {
@@ -80,9 +78,9 @@ string TicketSystem::Interprete(TokenScanner token) {
 }
 
 // [N] add_user
-string TicketSystem::VisitAddUser(TokenScanner &token) {
+string TicketSystem::VisitAddUser(const int &timestamp, TokenScanner &token) {
   string key, cur_username, username, password, name, mail_addr;
-  int privilege;
+  int privilege{10};
   while (!token.If_left()) {
     key = token.NextToken();
     if (key == "-c")
@@ -101,7 +99,7 @@ string TicketSystem::VisitAddUser(TokenScanner &token) {
       throw Exception{string{"Invaild Argument! "} + '"' + key + '"'};
   }
   return user_manager.AddUser(cur_username, username, password, name, mail_addr,
-                              privilege)
+                              privilege, timestamp)
              ? "0"
              : "-1";
 }
@@ -140,12 +138,13 @@ string TicketSystem::VisitQueryProfile(TokenScanner &token) {
       cur_username = token.NextToken();
     else if (key == "-u")
       username = token.NextToken();
-    else
-      throw Exception{string{"Invaild Argument! "} + '"' + key + '"'};
+    // else
+    //   throw Exception{string{"Invaild Argument! "} + '"' + key + '"'};
   }
   return user_manager.QueryProfile(cur_username, username);
 }
-string TicketSystem::VisitModifyProfile(TokenScanner &token) {
+string TicketSystem::VisitModifyProfile(const int &timestamp,
+                                        TokenScanner &token) {
   string key, cur_username, username, password{""}, name{""}, mail_addr{""};
   int privilege{-1};
   while (!token.If_left()) {
@@ -166,14 +165,15 @@ string TicketSystem::VisitModifyProfile(TokenScanner &token) {
       throw Exception{string{"Invaild Argument! "} + '"' + key + '"'};
   }
   return user_manager.ModifyProfile(cur_username, username, password, name,
-                                    mail_addr, privilege);
+                                    mail_addr, privilege, timestamp);
 }
 
 // 将 token 直接传入管理类。
-string TicketSystem::VisitAddTrain(TokenScanner &token) {
-  return train_manager.AddTrain(token) ? "0" : "-1";
+string TicketSystem::VisitAddTrain(const int &timestamp, TokenScanner &token) {
+  return train_manager.AddTrain(token, timestamp) ? "0" : "-1";
 }
-string TicketSystem::VisitDeleteTrain(TokenScanner &token) {
+string TicketSystem::VisitDeleteTrain(const int &timestamp,
+                                      TokenScanner &token) {
   string key, train_id;
   while (!token.If_left()) {
     key = token.NextToken();
@@ -182,9 +182,10 @@ string TicketSystem::VisitDeleteTrain(TokenScanner &token) {
     else
       throw Exception{string{"Invaild Argument! "} + '"' + key + '"'};
   }
-  return train_manager.DeleteTrain(train_id) ? "0" : "-1";
+  return train_manager.DeleteTrain(train_id, timestamp) ? "0" : "-1";
 }
-string TicketSystem::VisitReleaseTrain(TokenScanner &token) {
+string TicketSystem::VisitReleaseTrain(const int &timestamp,
+                                       TokenScanner &token) {
   string key, train_id;
   while (!token.If_left()) {
     key = token.NextToken();
@@ -193,7 +194,7 @@ string TicketSystem::VisitReleaseTrain(TokenScanner &token) {
     else
       throw Exception{string{"Invaild Argument! "} + '"' + key + '"'};
   }
-  return train_manager.ReleaseTrain(train_id) ? "0" : "-1";
+  return train_manager.ReleaseTrain(train_id, timestamp) ? "0" : "-1";
 }
 string TicketSystem::VisitQueryTrain(TokenScanner &token) {
   Date date;
@@ -287,7 +288,8 @@ string TicketSystem::VisitQueryOrder(TokenScanner &token) {
   if (!user_manager.IsLogin(username)) return "-1";
   return train_manager.QueryOrder(username);
 }
-string TicketSystem::VisitRefundTicket(TokenScanner &token) {
+string TicketSystem::VisitRefundTicket(const int &timestamp,
+                                       TokenScanner &token) {
   string key, username;
   unsigned rank{1};
   while (!token.If_left()) {
@@ -300,25 +302,26 @@ string TicketSystem::VisitRefundTicket(TokenScanner &token) {
       throw Exception{string{"Invaild Argument! "} + '"' + key + '"'};
   }
   if (!user_manager.IsLogin(username)) return "-1";
-  return train_manager.RefundTicket(username, rank) ? "0" : "-1";
+  return train_manager.RefundTicket(username, rank, timestamp) ? "0" : "-1";
 }
-string TicketSystem::VisitRollback(TokenScanner &token) {
+string TicketSystem::VisitRollback(const int &timestamp, TokenScanner &token) {
   string key;
-  int timestamp;
+  int to;
   while (!token.If_left()) {
     key = token.NextToken();
     if (key == "-t")
-      timestamp = std::stoi(token.NextToken());
+      to = std::stoi(token.NextToken());
     else
       throw Exception{string{"Invaild Argument! "} + '"' + key + '"'};
   }
-  // TODO rollback
+  if (to > timestamp) return "-1";
+  user_manager.RollBack(to);
+  train_manager.RollBack(to);
   return "0";
 }
 string TicketSystem::VisitClean() {
-  user_manager.Clean();
-  train_manager.Clean();
+  // rollback 中没有 clean.
   return "0";
 }
 
-#endif  // TICKETSYSTEM_COMMANDS_HPP_
+#endif  // TICKETSYSTEM_ROLLBACK_COMMANDS_HPP_
