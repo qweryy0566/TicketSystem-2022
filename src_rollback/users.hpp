@@ -102,9 +102,9 @@ class UserManagement {
            " " + std::to_string(target_user.Privilege());
   }
 
-  void RollBack(const int &timestamp) {
+  void RollBack(const int &timestamp, const int &now) {
     login.clear();
-    users.RollBack(timestamp);
+    users.RollBack(timestamp, now);
   }
 };
 

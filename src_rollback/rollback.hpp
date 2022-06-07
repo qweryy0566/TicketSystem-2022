@@ -74,17 +74,21 @@ class BptPlus {
     return data.Traverse(key);
   }
 
-  void RollBack(const int &timestamp) {
-    vector<History> opts{history.GetSuf(timestamp)};
-    for (int i = opts.size() - 1; ~i; --i) {
-      if (opts[i].opt == History::INSERT)
-        data.Delete(opts[i].key, opts[i].subkey);
-      else if (opts[i].opt == History::DELETE)
-        data.Insert(opts[i].key, opts[i].subkey, opts[i].value);
-      else
-        data.Modify(opts[i].key, opts[i].subkey, opts[i].value);
-      history.Delete(opts[i].timestamp, opts[i].cnt);
-    }
+  void RollBack(const int &timestamp, const int &now) {
+    int pos{now};
+    do {
+      pos = std::max(timestamp, pos - 100000);
+      vector<History> opts{history.GetSuf(pos)};
+      for (int i = opts.size() - 1; ~i; --i) {
+        if (opts[i].opt == History::INSERT)
+          data.Delete(opts[i].key, opts[i].subkey);
+        else if (opts[i].opt == History::DELETE)
+          data.Insert(opts[i].key, opts[i].subkey, opts[i].value);
+        else
+          data.Modify(opts[i].key, opts[i].subkey, opts[i].value);
+        history.Delete(opts[i].timestamp, opts[i].cnt);
+      }
+    } while (pos > timestamp);
   }
   void Clear() {}
 };
