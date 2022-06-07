@@ -95,6 +95,7 @@ class UserManagement {
     if (~privilege) {
       if (privilege >= login[cur_username]) return "-1";
       target_user.ChangePrivilege(privilege);
+      if (IsLogin(username)) login[username] = privilege;
     }
     if (!password.empty()) target_user.ChangePassword(password);
     if (!name.empty()) target_user.ChangeName(name);
