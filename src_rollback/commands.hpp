@@ -138,8 +138,8 @@ string TicketSystem::VisitQueryProfile(TokenScanner &token) {
       cur_username = token.NextToken();
     else if (key == "-u")
       username = token.NextToken();
-    // else
-    //   throw Exception{string{"Invaild Argument! "} + '"' + key + '"'};
+    else
+      throw Exception{string{"Invaild Argument! "} + '"' + key + '"'};
   }
   return user_manager.QueryProfile(cur_username, username);
 }
