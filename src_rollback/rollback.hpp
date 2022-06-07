@@ -10,7 +10,7 @@ class BptPlus {
     _key_type key;
     _subkey_type subkey;
     _value_type value;
-    bool is_empty, is_delete;
+    bool is_empty{0}, is_delete;
 
     History() {}
     History(const _key_type &key, const _subkey_type &subkey)
@@ -21,7 +21,7 @@ class BptPlus {
   };
   int last_stamp{0}, cnt;
   BPlusTree<_key_type, _subkey_type, _value_type, M, L> data;
-  BPlusTree<int, int, History, 509, LL> history;
+  BPlusTree<int, int, History, 253, LL> history;
 
   void UpdateCnt(const int &timestamp) {
     if (timestamp != last_stamp) last_stamp = timestamp, cnt = -1;
@@ -65,8 +65,8 @@ class BptPlus {
     return data.Traverse(key);
   }
 
-  void RollBack(const int &timestamp) {
-    for (; last_stamp > timestamp; --last_stamp) {
+  void RollBack(const int &timestamp, const int &now) {
+    for (last_stamp = now - 1; last_stamp > timestamp; --last_stamp) {
       vector<History> opts{history.Traverse(last_stamp)};
       for (int i = opts.size() - 1; ~i; --i) {
         if (opts[i].is_empty)

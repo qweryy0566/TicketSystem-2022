@@ -473,12 +473,21 @@ class TrainManagement {
     return 1;
   }
 
-  void RollBack(const int &timestamp) {
-    trains.RollBack(timestamp);
-    station_trains.RollBack(timestamp);
-    ticket_trains.RollBack(timestamp);
-    orders.RollBack(timestamp);
-    pending_orders.RollBack(timestamp);
+  void RollBack(const int &timestamp, const int &now) {
+    trains.RollBack(timestamp, now);
+    train_dates.RollBack(timestamp, now);
+    station_trains.RollBack(timestamp, now);
+    ticket_trains.RollBack(timestamp, now);
+    orders.RollBack(timestamp, now);
+    pending_orders.RollBack(timestamp, now);
+  }
+  void Clean() {
+    trains.Clear();
+    train_dates.Clear();
+    station_trains.Clear();
+    ticket_trains.Clear();
+    orders.Clear();
+    pending_orders.Clear();
   }
 };
 

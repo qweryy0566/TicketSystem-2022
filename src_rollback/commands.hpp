@@ -35,8 +35,6 @@ string TicketSystem::Interprete(TokenScanner token) {
   key = token.NextToken('[', ']');
   if (!key.length()) return "";
   int timestamp{std::stoi(key)};
-  // TODO : timestamp && rollback
-  // log_manager.AddLog(timestamp, token.Getleft());
   ret = "[" + key + "] ";
   key = token.NextToken();
   if (key == "exit") {
@@ -82,7 +80,7 @@ string TicketSystem::Interprete(TokenScanner token) {
 // [N] add_user
 string TicketSystem::VisitAddUser(const int &timestamp, TokenScanner &token) {
   string key, cur_username, username, password, name, mail_addr;
-  int privilege;
+  int privilege{10};
   while (!token.If_left()) {
     key = token.NextToken();
     if (key == "-c")
@@ -317,12 +315,13 @@ string TicketSystem::VisitRollback(const int &timestamp, TokenScanner &token) {
       throw Exception{string{"Invaild Argument! "} + '"' + key + '"'};
   }
   if (to > timestamp) return "-1";
-  user_manager.RollBack(to);
-  train_manager.RollBack(to);
+  user_manager.RollBack(to, timestamp);
+  train_manager.RollBack(to, timestamp);
   return "0";
 }
 string TicketSystem::VisitClean() {
-  // rollback 测试中没有 clean.
+  user_manager.Clean();
+  train_manager.Clean();
   return "0";
 }
 
