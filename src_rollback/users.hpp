@@ -34,7 +34,7 @@ class User {
 };
 
 class UserManagement {
-  BptPlus<size_t, int, User, 339, 67, 59> users;  // username_hash -> user
+  BptPlus<size_t, int, User, 339, 67, 55> users;  // username_hash -> user
   unordered_map<string, int> login;
 
  public:
@@ -101,13 +101,9 @@ class UserManagement {
            " " + std::to_string(target_user.Privilege());
   }
 
-  void RollBack(const int &timestamp, const int &now) {
+  void RollBack(const int &timestamp) {
     login.clear();
-    users.RollBack(timestamp, now);
-  }
-  void Clean() {
-    users.Clear();
-    login.clear();
+    users.RollBack(timestamp);
   }
 };
 

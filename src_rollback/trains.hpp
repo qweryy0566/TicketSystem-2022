@@ -98,13 +98,13 @@ class TrainManagement {
   // trainid -> train
   BptPlus<size_t, int, Train, 339, 2, 2> trains;
   // trainid -> train_date
-  BptPlus<size_t, int, TrainDate, 339, 203, 169> train_dates;
+  BptPlus<size_t, int, TrainDate, 339, 203, 144> train_dates;
   // (stationid, trainid) -> station_train
-  BptPlus<size_t, size_t, StationTrain, 339, 101, 84> station_trains;
+  BptPlus<size_t, size_t, StationTrain, 339, 101, 77> station_trains;
   // (trainid, date) -> ticket_of_train
   BptPlus<size_t, Date, TicketTrain, 339, 18, 17> ticket_trains;
   // (userid, -timestamp) -> order  后到先输出
-  BptPlus<size_t, int, Order, 339, 38, 35> orders;
+  BptPlus<size_t, int, Order, 339, 38, 34> orders;
   // (<trainid, date>, timestamp) -> pending_info  先到先得
   BptPlus<pair<size_t, Date>, int, PendingInfo, 254, 144, 112> pending_orders;
 
@@ -473,21 +473,13 @@ class TrainManagement {
     return 1;
   }
 
-  void RollBack(const int &timestamp, const int &now) {
-    trains.RollBack(timestamp, now);
-    train_dates.RollBack(timestamp, now);
-    station_trains.RollBack(timestamp, now);
-    ticket_trains.RollBack(timestamp, now);
-    orders.RollBack(timestamp, now);
-    pending_orders.RollBack(timestamp, now);
-  }
-  void Clean() {
-    trains.Clear();
-    train_dates.Clear();
-    station_trains.Clear();
-    ticket_trains.Clear();
-    orders.Clear();
-    pending_orders.Clear();
+  void RollBack(const int &timestamp) {
+    trains.RollBack(timestamp);
+    train_dates.RollBack(timestamp);
+    station_trains.RollBack(timestamp);
+    ticket_trains.RollBack(timestamp);
+    orders.RollBack(timestamp);
+    pending_orders.RollBack(timestamp);
   }
 };
 

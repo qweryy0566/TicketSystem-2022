@@ -1339,6 +1339,95 @@ public:
         }
     }
 
+    vector<_value_type> GetSuf(const _key_type& key){
+        vector<_value_type> v_all;
+        v_all.clear();
+        file_node_.open(filename_node);
+        file_block_.open(filename_block);
+        int count_all=0;
+        file_node_.seekg(0);
+        file_node_.read(reinterpret_cast<char*>(&count_all),sizeof(int));
+        if(!count_all){
+            file_node_.close();
+            file_block_.close();
+
+            return v_all;
+        }
+        else{
+            int h , t , mid, ind;
+            Lead<_key_type, _subkey_type, _value_type> min_lead;
+            min_lead.key=key;
+            min_lead.subkey=std::numeric_limits<_subkey_type>::min();
+            long long int first_pos=0;
+            file_node_.seekg(sizeof(int));
+            file_node_.read(reinterpret_cast<char*>(&first_pos),sizeof(long long int));
+            Node<_key_type, _subkey_type, _value_type, M> test_node;
+            while(true) {
+                file_node_.seekg(first_pos);
+                file_node_.read(reinterpret_cast<char *>(&test_node), sizeof(Node<_key_type, _subkey_type, _value_type, M>));
+                h = 0, t = test_node.node_size - 1,ind=-1;
+                while (h <= t) {// find the first one > targeted_lead
+                    mid = h + ((t - h) >> 1);
+                    if (min_lead < test_node.array_lead[mid]) {
+                        ind = mid;
+                        t = mid - 1;
+                    } else h = mid + 1;
+                }
+                if(ind==-1){
+                    int k=test_node.node_size-1;
+                    first_pos=test_node.array_lead[k].son_pos;
+                }
+                else{
+                    if(ind){
+                        first_pos=test_node.array_lead[ind-1].son_pos;
+                    }
+                    else{
+                        first_pos=test_node.array_lead[0].son_pos;
+                    }
+                }
+                if(test_node.tag==1) break;
+            }
+            Block<_key_type, _subkey_type, _value_type, L> test_block;
+            file_block_.seekg(first_pos);
+            file_block_.read(reinterpret_cast<char*>(&test_block),sizeof(Block<_key_type, _subkey_type, _value_type, L>));
+            Element<_key_type, _subkey_type, _value_type> min_element;
+            min_element.key=key;
+            min_element.subkey=std::numeric_limits<_subkey_type>::min();
+            int first_ind=-1;
+            h=0;t=test_block.block_size-1;
+            while(h<=t){//find the first one >= min_element
+                mid=h+((t-h)>>1);
+                if(min_element<=test_block.array_element[mid]){
+                    first_ind=mid;
+                    t=mid-1;
+                }
+                else h=mid+1;
+            }
+            if(first_ind==-1){//all of them < the targeted
+                first_ind=test_block.block_size;
+            }
+            
+            long long int pos=first_pos;
+            file_block_.seekg(pos);
+            file_block_.read(reinterpret_cast<char*>(&test_block),sizeof(Block<_key_type, _subkey_type, _value_type, L>));
+            for(int i=first_ind;i<=test_block.block_size-1;i++){
+                v_all.push_back(test_block.array_element[i].value);
+            }
+
+            for(pos=test_block.next;pos;pos=test_block.next){
+                file_block_.seekg(pos);
+                file_block_.read(reinterpret_cast<char*>(&test_block),sizeof(Block<_key_type, _subkey_type, _value_type, L>));
+                for(int i=0;i<=test_block.block_size-1;i++){
+                    v_all.push_back(test_block.array_element[i].value);
+                }
+            }
+            file_block_.close();
+            file_node_.close();
+
+            return v_all;
+        }
+    }
+
     [[nodiscard]] _value_type Get(const _key_type& key, const _subkey_type& subkey){
         // CACHE
         if (cache.find({key, subkey}) != cache.cend())

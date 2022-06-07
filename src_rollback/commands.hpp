@@ -315,13 +315,12 @@ string TicketSystem::VisitRollback(const int &timestamp, TokenScanner &token) {
       throw Exception{string{"Invaild Argument! "} + '"' + key + '"'};
   }
   if (to > timestamp) return "-1";
-  user_manager.RollBack(to, timestamp);
-  train_manager.RollBack(to, timestamp);
+  user_manager.RollBack(to);
+  train_manager.RollBack(to);
   return "0";
 }
 string TicketSystem::VisitClean() {
-  user_manager.Clean();
-  train_manager.Clean();
+  // rollback 中没有 clean.
   return "0";
 }
 
