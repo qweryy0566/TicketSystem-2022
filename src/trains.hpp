@@ -42,7 +42,7 @@ class TicketTrain {
   TicketTrain(const int &num, const int &seat) : station_num{num}, seat{seat} {
     for (int i = 0; i < station_num - 1; ++i) cnt[i] = seat;
   }
-  int QueryTicket(int l, int r) {
+  int QueryTicket(int l, int r) const {
     int ans{cnt[l]};
     for (int i = l + 1; i <= r; ++i) ans = std::min(ans, cnt[i]);
     return ans;
