@@ -476,6 +476,7 @@ class TrainManagement {
 
   void Clean() {
     trains.Clear();
+    train_dates.Clear();
     station_trains.Clear();
     ticket_trains.Clear();
     orders.Clear();
