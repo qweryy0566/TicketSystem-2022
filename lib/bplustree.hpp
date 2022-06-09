@@ -180,7 +180,7 @@ public:
     
     BPlusTree(std::string name1,std::string name2):
     // CACHE
-    cache_size{(1 << 18) / sizeof(pair<pair<_key_type, _subkey_type>, _value_type>)},
+    cache_size{(1 << 17) / sizeof(pair<pair<_key_type, _subkey_type>, _value_type>)},
     filename_node(name1),filename_block(name2){
         file_node_.open(filename_node);
         if(!file_node_){
