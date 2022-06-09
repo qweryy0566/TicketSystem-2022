@@ -3,4 +3,4 @@ project(TicketSystem_2022)
 set(CMAKE_CXX_FLAGS "-std=c++17 -Ofast")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG -Wall -fsanitize=address -fsanitize=undefined")
 
-add_executable(code src_rollback/main.cpp)
+add_executable(code src/main.cpp)
