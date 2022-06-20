@@ -10,7 +10,7 @@ TicketSystem ticket_system;
 int main() {
   srand(time(0));
   std::ios::sync_with_stdio(0);
-  std::cin.tie(0), std::cout.tie(0);
+  // std::cin.tie(0), std::cout.tie(0);
   std::string input, output;
   while (std::getline(cin, input)) try {
       output = ticket_system.Interprete(input);
@@ -19,6 +19,7 @@ int main() {
         if (output.substr(output.find(' ')) == " bye") break;
       }
     } catch (const Exception &exception) {
+      std::cout << exception.output << '\n';
       std::cerr << exception.what() << '\n';
     } catch (...) {
       std::cerr << "Invalid format!\n";
