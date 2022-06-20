@@ -39,42 +39,47 @@ string TicketSystem::Interprete(TokenScanner token) {
   // log_manager.AddLog(timestamp, token.Getleft());
   ret = "[" + key + "] ";
   key = token.NextToken();
-  if (key == "exit") {
-    ret += "bye";
-  } else if (key == "add_user") {
-    ret += VisitAddUser(token);
-  } else if (key == "login") {
-    ret += VisitLogin(token);
-  } else if (key == "logout") {
-    ret += VisitLogout(token);
-  } else if (key == "query_profile") {
-    ret += VisitQueryProfile(token);
-  } else if (key == "modify_profile") {
-    ret += VisitModifyProfile(token);
-  } else if (key == "add_train") {
-    ret += VisitAddTrain(token);
-  } else if (key == "delete_train") {
-    ret += VisitDeleteTrain(token);
-  } else if (key == "release_train") {
-    ret += VisitReleaseTrain(token);
-  } else if (key == "query_train") {
-    ret += VisitQueryTrain(token);
-  } else if (key == "query_ticket") {
-    ret += VisitQueryTicket(token);
-  } else if (key == "query_transfer") {
-    ret += VisitQueryTransfer(token);
-  } else if (key == "buy_ticket") {
-    ret += VisitBuyTicket(timestamp, token);
-  } else if (key == "query_order") {
-    ret += VisitQueryOrder(token);
-  } else if (key == "refund_ticket") {
-    ret += VisitRefundTicket(token);
-  } else if (key == "rollback") {
-    ret += VisitRollback(token);
-  } else if (key == "clean") {
-    ret += VisitClean();
-  } else {
-    throw Exception{string{"Invalid command! "} + '"' + key + '"'};
+  try {
+    if (key == "exit") {
+      ret += "bye";
+    } else if (key == "add_user") {
+      ret += VisitAddUser(token);
+    } else if (key == "login") {
+      ret += VisitLogin(token);
+    } else if (key == "logout") {
+      ret += VisitLogout(token);
+    } else if (key == "query_profile") {
+      ret += VisitQueryProfile(token);
+    } else if (key == "modify_profile") {
+      ret += VisitModifyProfile(token);
+    } else if (key == "add_train") {
+      ret += VisitAddTrain(token);
+    } else if (key == "delete_train") {
+      ret += VisitDeleteTrain(token);
+    } else if (key == "release_train") {
+      ret += VisitReleaseTrain(token);
+    } else if (key == "query_train") {
+      ret += VisitQueryTrain(token);
+    } else if (key == "query_ticket") {
+      ret += VisitQueryTicket(token);
+    } else if (key == "query_transfer") {
+      ret += VisitQueryTransfer(token);
+    } else if (key == "buy_ticket") {
+      ret += VisitBuyTicket(timestamp, token);
+    } else if (key == "query_order") {
+      ret += VisitQueryOrder(token);
+    } else if (key == "refund_ticket") {
+      ret += VisitRefundTicket(token);
+    } else if (key == "rollback") {
+      ret += VisitRollback(token);
+    } else if (key == "clean") {
+      ret += VisitClean();
+    } else {
+      throw Exception{string{"Invalid command! "} + '"' + key + '"'};
+    }
+  } catch (Exception &exception) {
+    exception.output = ret + "-1";
+    throw exception;
   }
   return ret;
 }

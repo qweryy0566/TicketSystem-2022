@@ -54,25 +54,35 @@ class UserManagement {
     size_t userid = UserNameHash(username);
     if (!users.Size())
       privilege = 10;
-    else if (!IsLogin(cur_username) || login[cur_username] <= privilege ||
-             users.Exist(userid))
+    else {
+      if (!IsLogin(cur_username))
+        throw Exception{"当前用户未登录。"};
+      if (login[cur_username] <= privilege)
+        throw Exception{"创建用户权限不足。"};
+      if (users.Exist(userid))
+        throw Exception{"用户已存在。"};
       return 0;
+    }
     User new_user{username, password, name, mail_addr, privilege};
     users.Insert(userid, 0, new_user);
     return 1;
   }
   bool Login(const string &username, const string &password) {
     size_t userid = UserNameHash(username);
-    if (IsLogin(username)) return 0;
+    if (IsLogin(username))
+      throw Exception{"用户已登录。"};
     User target_user{users.Get(userid, 0)};
-    if (!~target_user.Privilege() || password != target_user.Password())
-      return 0;
+    if (!~target_user.Privilege())
+      throw Exception{"用户名不存在。"};
+    if (password != target_user.Password())
+      throw Exception{"密码错误。"};
     return login[username] = target_user.Privilege(), 1;
   }
   bool Logout(const string &username) { return login.erase(username); }
   string QueryProfile(const string &cur_username, const string &username) {
     size_t userid = UserNameHash(username);
-    if (!IsLogin(cur_username)) return "-1";
+    if (!IsLogin(cur_username))
+      throw Exception{"当前用户未登录。"};
     User target_user{users.Get(userid, 0)};
     if (!~target_user.Privilege() ||
         cur_username != username &&
@@ -85,7 +95,8 @@ class UserManagement {
                        const string &password, const string &name,
                        const string &mail_addr, int &privilege) {
     size_t userid = UserNameHash(username);
-    if (!IsLogin(cur_username)) return "-1";
+    if (!IsLogin(cur_username))
+      throw Exception{"当前用户未登录。"};
     User target_user{users.Get(userid, 0)};
     if (!~target_user.Privilege() ||
         cur_username != username &&
@@ -93,7 +104,8 @@ class UserManagement {
       return "-1";
     // 权限默认 -1.
     if (~privilege) {
-      if (privilege >= login[cur_username]) return "-1";
+      if (privilege >= login[cur_username])
+        throw Exception{"权限不足。"};
       target_user.ChangePrivilege(privilege);
       if (IsLogin(username)) login[username] = privilege;
     }
