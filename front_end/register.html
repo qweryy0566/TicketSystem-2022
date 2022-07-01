@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <!-- You MUST include jQuery before Fomantic -->
+  <script src="https://unpkg.com/jquery@3.3.1/dist/jquery.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/fomantic-ui@2.8.8/dist/semantic.min.css">
+  <script src="https://unpkg.com/fomantic-ui@2.8.8/dist/semantic.min.js"></script>
+
+  <title>火车票 - 注册用户</title>
+  <script src="check_login.js"></script>
+</head>
+
+<body>
+  <script>
+    window.addEventListener("load", function () {
+      var Form = document.getElementById("myForm");
+      Form.addEventListener("submit", function () {
+        event.preventDefault();
+        var xml = new XMLHttpRequest();
+        var FD = new FormData(Form);
+        xml.open("POST", "register.php");
+        xml.send(FD);
+        xml.onreadystatechange = function () {
+          if (xml.readyState == 4 && xml.status == 200) {
+            if (xml.responseText == "-1")
+              alert("注册失败！");
+            else {
+              alert("注册成功，点击确认跳转至登录界面。");
+              window.location.href = "login.html";
+            }
+          }
+        }
+      })
+    })
+  </script>
+  <div class="ui blue inverted large fixed menu">
+    <a href="index.html" class="header item">
+      火车票管理系统
+    </a>
+    <a href="cmd.html" class="item">
+      命令行模式
+    </a>
+    <div class="right menu" id="right_menu">
+      <a href="login.html" class="item">登录</a>
+      <a href="register.html" class="item">注册</a>
+    </div>
+  </div>
+  <p></br></br></br></p>
+
+  <div class="ui huge center aligned header">
+    注册用户
+  </div>
+  <div class="ui text container">
+    <form class="ui form" id="myForm" method="post">
+      <div class="field">
+        <label>账户名</label>
+        <input type="text" name="username" id="username" required="required">
+      </div>
+      <div class="field">
+        <label>密码</label>
+        <input type="password" name="password" id="password" required="required">
+      </div>
+      <div class="field">
+        <label>真实姓名</label>
+        <input type="text" name="name" id="name" required="required">
+      </div>
+      <div class="field">
+        <label>邮箱</label>
+        <input type="text" name="mailAddr" id="mailAddr" required="required">
+      </div>
+      <br>
+      <button class="ui blue fluid button" type="submit">注册</button>
+    </form>
+  </div>
+
+
+</body>
+
+</html>

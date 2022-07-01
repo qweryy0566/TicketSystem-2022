@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <!-- You MUST include jQuery before Fomantic -->
+  <script src="https://unpkg.com/jquery@3.3.1/dist/jquery.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/fomantic-ui@2.8.8/dist/semantic.min.css">
+  <script src="https://unpkg.com/fomantic-ui@2.8.8/dist/semantic.min.js"></script>
+  <script src="check_login.js"></script>
+
+  <title>火车票 - 首页</title>
+</head>
+
+<body>
+  <script>
+    window.addEventListener("load", function () {
+      var Form = document.getElementById("queryForm");
+      Form.addEventListener("submit", function () {
+        event.preventDefault();
+        var xml = new XMLHttpRequest();
+        var FD = new FormData(Form);
+        xml.open("POST", "query_ticket.php");
+        xml.send(FD);
+        xml.onreadystatechange = function () {
+          if (xml.readyState == 4 && xml.status == 200) {
+            var trains = xml.responseText.split('\n');
+            var result = document.getElementById("result_table");
+            result.innerHTML = "";
+            for (var i = 1; i < trains.length; ++i) {
+              var the = trains[i].split(' ');
+              result.innerHTML +=
+              `<tr>
+                <td>${the[0]}</td>
+                <td>${the[1]}</td>
+                <td>${the[2]} ${the[3]}</td>
+                <td>${the[5]}</td>
+                <td>${the[6]} ${the[7]}</td>
+                <td>${the[8]}</td>
+                <td>${the[9]}</td>
+              </tr>`;
+            }
+            if (trains.length == 1)
+              alert("没有找到对应的车次www.");
+          }
+        }
+      })
+    })
+  </script>
+  <div class="ui blue inverted large fixed menu">
+    <a href="index.html" class="header item">
+      火车票管理系统
+    </a>
+    <a href="cmd.html" class="item">
+      命令行模式
+    </a>
+    <div class="right menu" id="right_menu">
+      <a href="login.html" class="item">登录</a>
+      <a href="register.html" class="item">注册</a>
+    </div>
+  </div>
+  <p></br></br></br></p>
+  <div class="ui text container">
+    <div class="ui segement">
+      <form class="ui form" id="queryForm" method="post">
+        <div class="three fields">
+          <div class="field">
+            <label>出发站</label>
+            <input type="text" id="from" name="from" value="福州" required="required">
+          </div>
+          <div class="field">
+            <label>到达站</label>
+            <input type="text" id="to" name="to" value="上海虹桥" required="required">
+          </div>
+          <div class="field">
+            <label>出发日期</label>
+            <input type="date" id="date" name="date" required="required">
+          </div>
+        </div>
+        <button class="ui blue fluid button" type="submit">查询车票</button>
+      </form>
+    </div>
+  </div>
+  <br>
+  <div class="ui container">
+    <table class="ui blue striped table">
+      <thead>
+        <tr>
+          <th>车次</th>
+          <th>From</th>
+          <th>出发时间</th>
+          <th>To</th>
+          <th>到达时间</th>
+          <th>价格</th>
+          <th>剩余票数</th>
+        </tr>
+      </thead>
+      <tbody id="result_table">
+
+      </tbody>
+    </table>
+  </div>
+</body>
+
+</html>

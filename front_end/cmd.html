@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <!-- You MUST include jQuery before Fomantic -->
+  <script src="https://unpkg.com/jquery@3.3.1/dist/jquery.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/fomantic-ui@2.8.8/dist/semantic.min.css">
+  <script src="https://unpkg.com/fomantic-ui@2.8.8/dist/semantic.min.js"></script>
+
+  <title>火车票 - 命令行</title>
+  <script src="check_login.js"></script>
+</head>
+
+<body>
+  <script>
+    var cnt = 0;
+    function PrintCmd() {
+      var xml = new XMLHttpRequest();
+      var str = document.getElementById("cmdstr").value;
+      xml.open("GET", "cmd.php?cmdstr=" + str, true);
+      xml.send();
+      xml.onreadystatechange = function () {
+        if (xml.readyState == 4 && xml.status == 200) {
+          ++cnt;
+          var str = xml.responseText.replace(/\n/g, "<br>");
+          document.getElementById("result").innerHTML += "[" + cnt.toString() + "] " + str + "</br>";
+          document.getElementById("cmdstr").value = "";
+        }
+      }
+    }
+  </script>
+
+  <div class="ui blue inverted large fixed menu">
+    <a href="index.html" class="header item">
+      火车票管理系统
+    </a>
+    <div class="right menu" id="right_menu">
+
+      <a href="login.html" class="item">登录</a>
+      <a href="register.html" class="item">注册</a>
+    </div>
+  </div>
+  <p></br></br></br></p>
+
+  <div class="ui container">
+
+    <div class="ui form">
+      <div class="field">
+        <label>请输入命令：</label>
+        <input type="text" id="cmdstr" name="cmdstr" placeholder="不要输入时间戳哦~">
+      </div>
+      <button class="ui blue button" onclick="PrintCmd()">执行</button>
+    </div>
+
+    <h3 class="ui header">运行结果：</h3>
+    <div class="ui segment">
+      <p id="result"></p>
+    </div>
+  </div>
+
+</body>
+
+</html>
