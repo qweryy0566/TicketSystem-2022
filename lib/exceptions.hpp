@@ -7,6 +7,7 @@ class Exception {
   std::string info{""};
 
  public:
+  std::string output{""};
   Exception() {}
   Exception(const std::string &str) : info{str} {}
   virtual std::string what() const { return info; }

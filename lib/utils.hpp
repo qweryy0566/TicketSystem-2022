@@ -28,10 +28,10 @@ void Qsort(Iter first, Iter last, Compare Cmp = Compare{}) {
   std::swap(*li, *(li + rand() % (ri - li)));
   typename Iter::value_type x{*li};
   for (--ri; li != ri;) {
-    while (li != ri && !Cmp(*ri, x)) --ri;
-    *li = *ri;
-    while (li != ri && !Cmp(x, *li)) ++li;
-    *ri = *li;
+    while (li != ri && Cmp(x, *ri)) --ri;
+    if (li != ri) *li = *ri, ++li;
+    while (li != ri && Cmp(*li, x)) ++li;
+    if (li != ri) *ri = *li, --ri;
   }
   *li = x;
   Qsort(first, li, Cmp);
@@ -249,22 +249,16 @@ struct DateTime {
   }
 };
 
-template<class T1, class T2>
 struct PairHash {
+  template <class T1, class T2>
   size_t operator()(const pair<T1, T2> &obj) const {
     return obj.first + obj.second;
   }
-};
-template<>
-struct PairHash<size_t, Date> {
   size_t operator()(const pair<size_t, Date> &obj) const {
     return obj.first + int(obj.second);
   }
-};
-template<>
-struct PairHash<pair<size_t, Date>, int> {
   size_t operator()(const pair<pair<size_t, Date>, int> &obj) const {
-    return PairHash<size_t, Date>{}(obj.first) + obj.second;
+    return operator()(obj.first) + obj.second;
   }
 };
 
